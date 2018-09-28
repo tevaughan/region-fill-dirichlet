@@ -2,7 +2,11 @@
 \documentclass{article}
 
 \usepackage{amsmath}
+\usepackage{amssymb} % for \mathbb
 \usepackage{times}
+
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\foreach}{\forall}
 
 \title{%
 Using Laplace's Equation to Fill a Bounded Region of a Monochromatic Image%
@@ -16,33 +20,63 @@ Using Laplace's Equation to Fill a Bounded Region of a Monochromatic Image%
 
 \begin{abstract}
 
-   I present an algorithm for filling in a bounded region $P$ of a
-   monochromatic image.
+   Let $M$ be the set of pixels in a monochromatic image.  Consider any proper
+   subset $S \subsetneq M$ such that $S$ is sufficiently small as defined
+   below.  Let $B_S$ be the boundary of $S$, so that $\foreach q \in B_S$, $q$
+   is not in $S$ but shares an edge with some pixel $p \in S$.  Let $T = S \cup
+   B_S$.  Then $S$ is sufficiently small if $T \subsetneq M$.  For any pixel $p
+   \in M$, let $v_p$ be the original value of $p$.
+
+   I present an algorithm to compute a new value $r_p$ for each pixel $p \in
+   S$.  The new value $r_p$ is computed on the basis of the boundary-values
+   $\{v_q \: | \: q \in B_S\}$, on the basis of an estimate of the
+   high-spatial-frequency noise along the boundary, and as a solution to the
+   Dirichlet Problem for each of the boundary-values and the boundary-noise.
+   To wit:
    \begin{enumerate}
-      \item The pixel-values on $P$'s boundary $B$ are used to solve, via a
-         discretized version of Laplace's equation, for an initial estimate
-         $p_i$ of the value of each pixel $i$ in $P$.  This is the solution to
-         a discrete version of the Dirichlet problem.
-      \item The Dirichlet problem is then solved for the region $Q$, formed by
-         enlarging $P$ slightly, so that $Q$ includes $B$; this produces the
-         value $q_j$ of each pixel $j$ in $Q$.
-      \item For each pixel $k$ in $B$, the value $\sigma_k = |b_k - q_k|$,
-         where $b_k$ is the value of pixel $k$, is taken as an estimate of the
-         standard deviation for high-spatial-frequency noise at pixel $k$.
-      \item The Dirichlet problem is then solved again for the region $P$, but
-         now with $\sigma_k$ as the value of pixel $k$ in the boundary $B$; the
-         result is the value $\sigma_i$ for each pixel $i$ in $P$.
-      \item The final value for pixel $i$ in $P$ is $r_i = p_i + n_i$, where
-         $n_i$ is a random number drawn from the Gaussian distribution whose
-         standard deviation is $\sigma_i$.
+      \item For each pixel $p \in S$, compute the value $a_p$ of the solution
+         to the discrete Dirichlet problem for the boundary-values $\{v_q \: |
+         \: q \in B_S\}$.
+      \item For each pixel $p \in T$, compute the value $b_p$ of the solution
+         to the discrete Dirichlet problem for the boundary-values $\{v_q \: |
+         \: q \in B_T\}$.
+      \item For each pixel $q$ in $B_S$, compute the value $\sigma_q = |b_q -
+         v_q|$, which is taken as an estimate of the standard deviation for
+         high-spatial-frequency noise at pixel $q$.
+      \item For each pixel $p \in S$, compute the value $\sigma_p$ of the
+         solution to the discrete Dirichlet problem for the boundary-values
+         $\{\sigma_q \: | \: q \in B_S\}$.
+      \item For each pixel $p \in S$, compute the value $r_p = a_p + n_p$,
+         where $n_p$ is a random number drawn from the Gaussian distribution
+         whose standard deviation is $\sigma_p$.
    \end{enumerate}
    For an image with noise on the pixel values, this approach produces a filled
    region that does not so obviously stand out to the eye as would merely using
-   $p_i$ for the value of each pixel $i$ in the filled region.
+   $r_p = a_p$ for the new value of each pixel $p \in S$.
 
 \end{abstract}
 
 \section{Introduction}
+
+In the early part of the Fall Semester of 2018, I was helping my son with his
+homework for a course in partial differential equations.  He was solving the
+two-dimensional version of the Dirichlet Problem: to find for a closed region
+$A$ in the plane a function $f: A \rightarrow \R$ obeying Laplace's Equation,
+which can be written for Cartesian coordinates as\footnote{%
+   I use ``$\partial_x$'' to represent the operator whose meaning is ``the
+   first partial derivative with respect to $x$.'' Similarly, my
+   ``$\partial_x^2$'' represents the operator whose meaning is ``the second
+   partial derivative with respect to $x$.'' I picked up this notation from Ron
+   Kantowski, my professor in the quantum-field-theory course that I took in
+   graduate school in the early 1990s at the University of Oklahoma.}
+\begin{equation}
+   \left[\partial_x^2 + \partial_y^2\right] f(x,y) = 0.
+\end{equation}
+Along the boundary of $A$, the function's value is known ahead of the solution.
+
+While thinking about his problem, I was reminded of a problem that I had faced
+in a digital-image-processing course that I took when I was in college,
+probably around 1990, as I was finishing my undergraduate studies.
 
 \end{document}
 
