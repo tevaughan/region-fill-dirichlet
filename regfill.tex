@@ -21,30 +21,28 @@ Using Laplace's Equation to Fill a Bounded Region of a Monochromatic Image%
 \begin{abstract}
 
    Let $M$ be the set of pixels in a monochromatic image.  Consider any proper
-   subset $S \subsetneq M$ such that $S$ is sufficiently small as defined
-   below.  Let $B_S$ be the boundary of $S$, so that $\foreach q \in B_S$, $q$
-   is not in $S$ but shares an edge with some pixel $p \in S$.  Let $T = S \cup
-   B_S$.  Then $S$ is sufficiently small if $T \subsetneq M$.  For any pixel $p
-   \in M$, let $v_p$ be the original value of $p$.
+   subset $N \subsetneq M$.  Let $B_N$ be the external boundary of $N$, so that
+   $\foreach q \in B_N$, the pixel $q$ is not in $N$ but shares an edge with
+   some pixel $p \in N$.  Let $T_N = N \cup B_N$ be the union of $N$ and its
+   external boundary.  Let $S \subsetneq M$ be any proper subset of $M$ such
+   that $T_S \subsetneq M$ is also a proper subset.  For any pixel $p \in M$,
+   let $v_p$ be the original value of $p$.
 
    I present an algorithm to compute a new value $r_p$ for each pixel $p \in
-   S$.  The new value $r_p$ is computed on the basis of the boundary-values
-   $\{v_q \: | \: q \in B_S\}$, on the basis of an estimate of the
-   high-spatial-frequency noise along the boundary, and as a solution to the
-   Dirichlet Problem for each of the boundary-values and the boundary-noise.
-   To wit:
+   S$.  The new value $r_p$ is computed on the basis of a solution to each of
+   three discrete-Dirichlet problems.  To wit:
    \begin{enumerate}
       \item For each pixel $p \in S$, compute the value $a_p$ of the solution
-         to the discrete Dirichlet problem for the boundary-values $\{v_q \: |
+         to the discrete-Dirichlet problem for the boundary-values $\{v_q \: |
          \: q \in B_S\}$.
-      \item For each pixel $p \in T$, compute the value $b_p$ of the solution
-         to the discrete Dirichlet problem for the boundary-values $\{v_q \: |
-         \: q \in B_T\}$.
+      \item For each pixel $p \in T_S$, compute the value $b_p$ of the solution
+         to the discrete-Dirichlet problem for the boundary-values $\{v_q \: |
+         \: q \in B_{T_S}\}$.
       \item For each pixel $q$ in $B_S$, compute the value $\sigma_q = |b_q -
          v_q|$, which is taken as an estimate of the standard deviation for
          high-spatial-frequency noise at pixel $q$.
       \item For each pixel $p \in S$, compute the value $\sigma_p$ of the
-         solution to the discrete Dirichlet problem for the boundary-values
+         solution to the discrete-Dirichlet problem for the boundary-values
          $\{\sigma_q \: | \: q \in B_S\}$.
       \item For each pixel $p \in S$, compute the value $r_p = a_p + n_p$,
          where $n_p$ is a random number drawn from the Gaussian distribution
