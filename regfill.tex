@@ -1,0 +1,48 @@
+
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{times}
+
+\title{%
+Using Laplace's Equation to Fill a Bounded Region of a Monochromatic Image%
+}
+
+\author{Thomas E. Vaughan}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+
+   I present an algorithm for filling in a bounded region $P$ of a
+   monochromatic image.
+   \begin{enumerate}
+      \item The pixel-values on $P$'s boundary $B$ are used to solve, via a
+         discretized version of Laplace's equation, for an initial estimate
+         $p_i$ of the value of each pixel $i$ in $P$.  This is the solution to
+         a discrete version of the Dirichlet problem.
+      \item The Dirichlet problem is then solved for the region $Q$, formed by
+         enlarging $P$ slightly, so that $Q$ includes $B$; this produces the
+         value $q_j$ of each pixel $j$ in $Q$.
+      \item For each pixel $k$ in $B$, the value $\sigma_k = |b_k - q_k|$,
+         where $b_k$ is the value of pixel $k$, is taken as an estimate of the
+         standard deviation for high-spatial-frequency noise at pixel $k$.
+      \item The Dirichlet problem is then solved again for the region $P$, but
+         now with $\sigma_k$ as the value of pixel $k$ in the boundary $B$; the
+         result is the value $\sigma_i$ for each pixel $i$ in $P$.
+      \item The final value for pixel $i$ in $P$ is $r_i = p_i + n_i$, where
+         $n_i$ is a random number drawn from the Gaussian distribution whose
+         standard deviation is $\sigma_i$.
+   \end{enumerate}
+   For an image with noise on the pixel values, this approach produces a filled
+   region that does not so obviously stand out to the eye as would merely using
+   $p_i$ for the value of each pixel $i$ in the filled region.
+
+\end{abstract}
+
+\section{Introduction}
+
+\end{document}
+
