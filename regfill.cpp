@@ -1,77 +1,32 @@
 
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <vector>
+#include "image.hpp"
 
+using namespace regfill;
 using namespace std;
 
-class pgm_header {
-  int num_cols_;
-  int num_rows_;
-  int max_val_;
-
-public:
-  pgm_header() : num_cols_(0), num_rows_(0), max_val_(0) {}
-
-  istream &init(istream &is) {
-    string m;
-    is >> m;
-    if (m != "P5") {
-      throw "magic '" + m + "' not 'P5'";
-    }
-    if (!(is >> num_cols_)) {
-      throw string("problem reading num_cols");
-    }
-    if (!(is >> num_rows_)) {
-      throw string("problem reading num_rows");
-    }
-    if (!(is >> max_val_)) {
-      throw string("problem reading max_val");
-    }
-    int const c = is.get();
-    if (c != ' ' && c != '\t' & c != '\n') {
-      throw "character after maxval not white space";
-    }
-    return is;
-  }
-
-  int num_cols() const { return num_cols_; }
-  int num_rows() const { return num_rows_; }
-  int max_val() const { return max_val_; }
+struct pcoord {
+  unsigned col;
+  unsigned row;
 };
 
-class image {
-  pgm_header header_;
-  vector<float> pix_;
+enum { INT_BOUND_SZ = 10 };
 
-public:
-  image(string fn) {
-    ifstream ifs(fn);
-    if (!ifs) {
-      throw "problem opening '" + fn + "'";
-    }
-    header_.init(ifs);
-    int const num_pix = header_.num_cols() * header_.num_rows();
-    pix_.resize(num_pix);
-    for (int i = 0; i < num_pix; ++i) {
-      pix_[i] = ifs.get();
-      if (!ifs) {
-        throw "error reading image";
-      }
-    }
-  }
+static array<pcoord, INT_BOUND_SZ> const internal_boundary{{{240, 155},
+                                                            {245, 164},
+                                                            {255, 170},
+                                                            {270, 173},
+                                                            {285, 172},
+                                                            {290, 166},
+                                                            {280, 161},
+                                                            {270, 155},
+                                                            {250, 153},
+                                                            {240, 155}}};
 
-  pgm_header const &header() const { return header_; }
+static pcoord const zoom_tl{230,140};
+static pcoord const zoom_br{300,180};
 
-  float &pixel(int c, int r) { return pix_[r * header_.num_cols() + c]; }
-
-  float const &pixel(int c, int r) const {
-    return pix_[r * header_.num_cols() + c];
-  }
-};
-
-int main(int argc, char** argv) {
+int main() {
+  image img("trees-raw.pgm");
   return 0;
 }
 
