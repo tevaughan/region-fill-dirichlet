@@ -47,8 +47,7 @@ public:
   pgm_header(std::istream &is) { read(is); }
 
   std::ostream &write(std::ostream &os) {
-    os << "P5\n" << num_cols_ << " " << num_rows_ << "\n" << max_val_ << "\n";
-    return os;
+    return os << format("P5\n%u %u\n%u\n", num_cols_, num_rows_, max_val_);
   }
 
   uint16_t num_cols() const { return num_cols_; }
