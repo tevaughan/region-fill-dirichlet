@@ -3,21 +3,20 @@
 #define REGFILL_PGM_HEADER_HPP
 
 #include "format.hpp"
-#include <fstream>
 #include <iostream>
 #include <string>
 
 namespace regfill {
 
 class pgm_header {
-  unsigned num_cols_;
-  unsigned num_rows_;
-  unsigned max_val_;
+  uint16_t num_cols_;
+  uint16_t num_rows_;
+  uint16_t max_val_;
 
 public:
   pgm_header() = default;
 
-  pgm_header(unsigned c, unsigned r, unsigned m)
+  pgm_header(uint16_t c, uint16_t r, uint16_t m)
       : num_cols_(c), num_rows_(r), max_val_(m) {}
 
   std::istream &read(std::istream &is) {
@@ -35,7 +34,10 @@ public:
     if (!(is >> max_val_)) {
       throw std::string("problem reading max_val");
     }
-    unsigned const c = is.get();
+    char c;
+    if (!is.get(c)) {
+      throw std::string("problem reading character after maxval");
+    }
     if (c != ' ' && c != '\t' & c != '\n') {
       throw format("character %X after maxval not white space", c);
     }
@@ -49,10 +51,10 @@ public:
     return os;
   }
 
-  unsigned num_cols() const { return num_cols_; }
-  unsigned num_rows() const { return num_rows_; }
+  uint16_t num_cols() const { return num_cols_; }
+  uint16_t num_rows() const { return num_rows_; }
+  uint16_t max_val() const { return max_val_; }
   unsigned num_pix() const { return num_cols_ * num_rows_; }
-  unsigned max_val() const { return max_val_; }
 };
 
 } // namespace regfill

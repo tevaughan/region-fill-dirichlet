@@ -1,6 +1,6 @@
 
 #include "pgm-header.hpp"
-#include <sstream>
+#include <fstream>
 #include <vector>
 
 #ifndef REGFILL_IMAGE_HPP
@@ -8,15 +8,27 @@
 
 namespace regfill {
 
+struct pcoord {
+  uint16_t col;
+  uint16_t row;
+
+  unsigned lin(unsigned num_cols) const { return row * num_cols + col; }
+
+  void lin(unsigned num_cols, unsigned new_lin) {
+    col = new_lin % num_cols;
+    row = new_lin / num_cols;
+  }
+};
+
 class image {
-  unsigned num_cols_;
   std::vector<float> pix_;
+  uint16_t num_cols_;
 
 public:
   image() = default;
 
-  image(unsigned c, unsigned r, float v = 0.0f)
-      : num_cols_(c), pix_(c * r, v) {}
+  image(uint16_t nc, uint16_t nr, float v = 0.0f)
+      : pix_(nc * nr, v), num_cols_(nc) {}
 
   std::istream &read(std::istream &is) {
     pgm_header h(is);
@@ -49,8 +61,8 @@ public:
     read(ifs);
   }
 
-  unsigned num_cols() const { return num_cols_; }
-  unsigned num_rows() const { return pix_.size() / num_cols_; }
+  uint16_t num_cols() const { return num_cols_; }
+  uint16_t num_rows() const { return pix_.size() / num_cols_; }
   unsigned num_pix() const { return pix_.size(); }
 
   std::ostream &write(std::ostream &os) {
@@ -72,13 +84,9 @@ public:
     return os;
   }
 
-  unsigned offset(unsigned c, unsigned r) const { return r * num_cols_ + c; }
+  float &operator()(pcoord p) { return pix_[p.lin(num_cols_)]; }
 
-  float &operator()(unsigned c, unsigned r) { return pix_[offset(c, r)]; }
-
-  float const &operator()(unsigned c, unsigned r) const {
-    return pix_[offset(c, r)];
-  }
+  float const &operator()(pcoord p) const { return pix_[p.lin(num_cols_)]; }
 };
 
 } // namespace regfill
