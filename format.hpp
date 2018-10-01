@@ -1,7 +1,7 @@
 
 /// \file   format.hpp
 /// \author Thomas E. Vaughan
-/// \brief  Definition of ps::format().
+/// \brief  Definition of regfill::format().
 
 #ifndef REGFILL_FORMAT_HPP
 #define REGFILL_FORMAT_HPP
