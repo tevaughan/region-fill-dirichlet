@@ -19,6 +19,7 @@ int main() {
     internal_boundary[i].row -= 1;
   }
   img.draw_polyline(internal_boundary, 255);
+  img.fill({265, 163}, 255);
   img.write("boundary.pgm");
   return 0;
 }

@@ -24,16 +24,19 @@ public:
   image() = default;
   image(std::string fn);
   image(uint16_t nc, uint16_t nr, float v = 0.0f);
-  unsigned lin(uint16_t c, uint16_t r) const;
+  unsigned lin(pcoord p) const;
   std::istream &read(std::istream &is);
   uint16_t num_cols() const { return num_cols_; }
   uint16_t num_rows() const { return pix_.size() / num_cols_; }
   unsigned num_pix() const { return pix_.size(); }
   std::ostream &write(std::ostream &os) const;
   void write(std::string fn) const;
-  float &operator()(uint16_t c, uint16_t r) { return pix_[lin(c, r)]; }
-  float const &operator()(uint16_t c, uint16_t r) const;
+  float &pixel(pcoord p) { return pix_[lin(p)]; }
+  float const &pixel(pcoord p) const { return pix_[lin(p)]; }
+  float &operator()(pcoord p) { return pixel(p); }
+  float const &operator()(pcoord p) const { return pixel(p); }
   void draw_polyline(std::vector<pcoord> p, float v);
+  void fill(pcoord p, float v);
 };
 
 inline image::image(std::string fn) {
@@ -47,13 +50,13 @@ inline image::image(std::string fn) {
 inline image::image(uint16_t nc, uint16_t nr, float v)
     : pix_(nc * nr, v), num_cols_(nc) {}
 
-inline unsigned image::lin(uint16_t c, uint16_t r) const {
-  if (c >= num_cols_) {
-    throw format("illegal col %u > %u", c, num_cols_);
+inline unsigned image::lin(pcoord p) const {
+  if (p.col >= num_cols_) {
+    throw format("illegal col %u > %u", p.col, num_cols_);
   }
-  unsigned const off = r * num_cols_ + c;
+  unsigned const off = p.row * num_cols_ + p.col;
   if (off >= pix_.size()) {
-    throw format("illegal row %u > %u", r, num_rows());
+    throw format("illegal row %u > %u", p.row, num_rows());
   }
   return off;
 }
@@ -108,10 +111,6 @@ inline void image::write(std::string fn) const {
   write(ofs);
 }
 
-inline float const &image::operator()(uint16_t c, uint16_t r) const {
-  return pix_[lin(c, r)];
-}
-
 inline void image::draw_polyline(std::vector<pcoord> p, float v) {
   if (p.size() == 0) {
     return;
@@ -121,7 +120,7 @@ inline void image::draw_polyline(std::vector<pcoord> p, float v) {
   }
   unsigned i = 0;
   do {
-    (*this)(p[i].col, p[i].row) = v; // Draw current end-point.
+    pixel(p[i]) = v; // Draw current end-point.
     unsigned j;
     for (j = i + 1; j < p.size(); ++j) {
       if (p[j] != p[i]) {
@@ -153,7 +152,7 @@ inline void image::draw_polyline(std::vector<pcoord> p, float v) {
       }
       for (double x = x1; x < x2; x += 1.0) {
         double const y = y1 + m * (x - x1);
-        (*this)(uint16_t(x + 0.5), uint16_t(y + 0.5)) = v;
+        pixel({uint16_t(x + 0.5), uint16_t(y + 0.5)}) = v;
       }
     } else {
       double const m = dc / dr;
@@ -169,11 +168,30 @@ inline void image::draw_polyline(std::vector<pcoord> p, float v) {
       }
       for (double x = x1; x < x2; x += 1.0) {
         double const y = y1 + m * (x - x1);
-        (*this)(uint16_t(y + 0.5), uint16_t(x + 0.5)) = v;
+        pixel({uint16_t(y + 0.5), uint16_t(x + 0.5)}) = v;
       }
     }
     i = j;
   } while (i < p.size());
+}
+
+inline void image::fill(pcoord p, float v) {
+  if (pixel(p) == v) {
+    return;
+  }
+  pixel(p) = v;
+  if (int(p.col) < int(num_cols_) - 1) {
+    fill({uint16_t(p.col + 1), p.row}, v);
+  }
+  if (int(p.row) < int(num_rows()) - 1) {
+    fill({p.col, uint16_t(p.row + 1)}, v);
+  }
+  if (p.col > 0) {
+    fill({uint16_t(p.col - 1), p.row}, v);
+  }
+  if (p.row > 0) {
+    fill({p.col, uint16_t(p.row - 1)}, v);
+  }
 }
 
 } // namespace regfill
