@@ -19,13 +19,18 @@ int main() {
     vertices[i].col -= 1;
     vertices[i].row -= 1;
   }
-  mask.draw_polyline(vertices, 255);
-  mask.fill({265, 163}, 255);
-  auto const b = mask.boundary(255);
+  mask.draw_polyline(vertices, 1);
+  mask.fill({265, 163}, 1);
+  img.laplacian_fill(mask);
+  auto const s = mask.threshold();
+  auto const b = mask.boundary();
+  vector<pcoord> t = s;
   for (auto p : b) {
-    mask(p) = 127;
+    mask(p) = 0.5;
+    t.push_back(p);
   }
   mask.write("mask.pgm");
+  img.write("trees-mod.pgm");
   return 0;
 }
 
