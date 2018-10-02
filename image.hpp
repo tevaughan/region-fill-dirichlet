@@ -9,33 +9,64 @@
 
 namespace regfill {
 
+/// Coordinates of pixel.
 struct pcoord {
-  uint16_t col;
-  uint16_t row;
+  uint16_t col; ///< Offset of column.
+  uint16_t row; ///< Offset of row.
+
+  /// Test equality of coordinates.
   bool operator==(pcoord p) const { return col == p.col && row == p.row; }
+
+  /// Test inequality of coordinates.
   bool operator!=(pcoord p) const { return col != p.col || row != p.row; }
 };
 
+/// Gray-scale image.
 class image {
-  std::vector<float> pix_;
-  unsigned num_cols_;
+  std::vector<float> pix_; ///< Storage for pixel-values.
+  unsigned num_cols_;      ///< Number of columns in image.
 
 public:
-  image() = default;
-  image(std::string fn);
+  image() = default;     ///< By default, don't initialize anything.
+  image(std::string fn); ///< Initialize image from PGM file.
+
+  /// Initialize solid-gray image, by default black.
   image(uint16_t nc, uint16_t nr, float v = 0.0f);
-  unsigned lin(pcoord p) const;
-  std::istream &read(std::istream &is);
+
+  unsigned lin(pcoord p) const;         ///< Linear offset of pixel.
+  std::istream &read(std::istream &is); ///< Read PGM data from stream.
+
+  /// Number of columns in image.  Value is simply retrieved.
   uint16_t num_cols() const { return num_cols_; }
+
+  /// Number of rows in image.  Value is computed when num_rows() called.
   uint16_t num_rows() const { return pix_.size() / num_cols_; }
+
+  /// Number of pixels in image.
   unsigned num_pix() const { return pix_.size(); }
+
+  /// Write PGM data to stream.
   std::ostream &write(std::ostream &os) const;
-  void write(std::string fn) const;
+
+  void write(std::string fn) const; ///< Write PGM data to file.
+
+  /// Reference to value of pixel.
   float &pixel(pcoord p) { return pix_[lin(p)]; }
+
+  /// Immutable reference to value of pixel.
   float const &pixel(pcoord p) const { return pix_[lin(p)]; }
+
+  /// Reference to value of pixel.
   float &operator()(pcoord p) { return pixel(p); }
+
+  /// Immutable reference to value of pixel.
   float const &operator()(pcoord p) const { return pixel(p); }
+
+  /// Draw closed polygonal perimeter.
   void draw_polyline(std::vector<pcoord> p, float v);
+
+  /// Start from supplied coordinates, and fill outward with value v until
+  /// closed border with value v is found.
   void fill(pcoord p, float v);
 };
 
