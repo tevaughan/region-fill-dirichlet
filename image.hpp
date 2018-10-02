@@ -2,7 +2,6 @@
 #ifndef REGFILL_IMAGE_HPP
 #define REGFILL_IMAGE_HPP
 
-#include "pcoord.hpp"
 #include "pgm-header.hpp"
 #include <fstream>
 #include <vector>
@@ -11,19 +10,21 @@ namespace regfill {
 
 class image {
   std::vector<float> pix_;
-  uint16_t num_cols_;
+  unsigned num_cols_;
 
 public:
   image() = default;
   image(std::string fn);
   image(uint16_t nc, uint16_t nr, float v = 0.0f);
+  unsigned lin(uint16_t c, uint16_t r) const;
   std::istream &read(std::istream &is);
   uint16_t num_cols() const { return num_cols_; }
   uint16_t num_rows() const { return pix_.size() / num_cols_; }
   unsigned num_pix() const { return pix_.size(); }
   std::ostream &write(std::ostream &os);
-  float &operator()(pcoord p) { return pix_[p.lin(num_cols_)]; }
-  float const &operator()(pcoord p) const { return pix_[p.lin(num_cols_)]; }
+  float &operator()(uint16_t c, uint16_t r) { return &pix_[lin(c, r)]; }
+  float const &operator()(uint16_t c, uint16_t r) const;
+  void draw_polyline(vector<pcoord> const &p, float v);
 };
 
 inline image::image(std::string fn) {
@@ -36,6 +37,17 @@ inline image::image(std::string fn) {
 
 inline image::image(uint16_t nc, uint16_t nr, float v)
     : pix_(nc * nr, v), num_cols_(nc) {}
+
+inline unsigned image::lin(uint16_t c, uint16_t r) const {
+  if (c >= num_cols_) {
+    throw format("illegal col %u > %u", c, num_cols_);
+  }
+  unsigned const off = r * num_cols_ + c;
+  if (off >= pix_.size()) {
+    throw format("illegal row %u > %u", r, num_rows());
+  }
+  return off;
+}
 
 inline std::istream &image::read(std::istream &is) {
   pgm_header h(is);
@@ -77,6 +89,34 @@ inline std::ostream &image::write(std::ostream &os) {
     os.put(uint8_t(c * (*i - min_val)));
   }
   return os;
+}
+
+inline float const &image::operator()(uint16_t c, uint16_t r) const {
+  return pix_[lin(c, r)];
+}
+
+inline void image::draw_polyline(vector<pcoord> const &p, float v) {
+  if (p.size() == 0) {
+    return;
+  }
+  vector<pcoord> q;
+  q.push_back(p[0]);
+  for (unsigned i = 1; i < p.size(); ++i) {
+    if (p[i] == p[i - 1]) {
+      continue; // Remove consecutive duplicates.
+    }
+    q.push_back(p[i]);
+  }
+  if (q.size() == 1) {
+    (*this)(p[0]) = v;
+    return;
+  }
+  if (q.front() != q.back()) {
+    q.push_back(q.front());
+  }
+  for (unsigned i = 1; i < q.size(); ++i) {
+    // TBD: Color every pixel through which line passes.
+  }
 }
 
 } // namespace regfill
