@@ -47,7 +47,7 @@ inline std::istream &pgm_header::read(std::istream &is) {
   if (!is.get(c)) {
     throw std::string("problem reading character after maxval");
   }
-  if (c != ' ' && c != '\t' & c != '\n') {
+  if (c != ' ' && c != '\t' && c != '\n') {
     throw format("character %X after maxval not white space", c);
   }
   return is;

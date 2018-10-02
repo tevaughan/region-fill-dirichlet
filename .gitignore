@@ -1,4 +1,8 @@
 trees-raw.pgm
+boundary.pgm
+regfill
+*.o
+.d
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
