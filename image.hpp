@@ -68,6 +68,9 @@ public:
   /// Start from supplied coordinates, and fill outward with value v until
   /// closed border with value v is found.
   void fill(pcoord p, float v);
+
+  /// Find boundary of region with intensity v.
+  std::vector<pcoord> boundary(float v);
 };
 
 inline image::image(std::string fn) {
@@ -223,6 +226,37 @@ inline void image::fill(pcoord p, float v) {
   if (p.row > 0) {
     fill({p.col, uint16_t(p.row - 1)}, v);
   }
+}
+
+std::vector<pcoord> image::boundary(float v) {
+  std::vector<pcoord> b;
+  int const nc = num_cols_;
+  int const nr = num_rows();
+  for (auto i = pix_.begin(); i != pix_.end(); ++i) {
+    if (*i == v) {
+      continue;
+    }
+    unsigned const off = i - pix_.begin();
+    uint16_t const c = off % num_cols_;
+    uint16_t const r = off / num_cols_;
+    if (int(c) < nc - 1 && pixel({uint16_t(c + 1), r}) == v) {
+      b.push_back({c, r});
+      continue;
+    }
+    if (int(r) < nr - 1 && pixel({c, uint16_t(r + 1)}) == v) {
+      b.push_back({c, r});
+      continue;
+    }
+    if (c > 0 && pixel({uint16_t(c - 1), r}) == v) {
+      b.push_back({c, r});
+      continue;
+    }
+    if (r > 0 && pixel({c, uint16_t(r - 1)}) == v) {
+      b.push_back({c, r});
+      continue;
+    }
+  }
+  return b;
 }
 
 } // namespace regfill
