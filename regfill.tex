@@ -21,9 +21,9 @@ Using Laplace's Equation to Fill a Bounded Region of a Monochromatic Image%
 \maketitle
 
 \begin{abstract}
-   I present, for a monochromatic image and by way of Laplace's Equation
-   applied to information at the boundary of a connected region of pixels in
-   the image, an algorithm that fills the region.  The algorithm smoothly
+   I present an procedure that, by way of information at the boundary of a
+   region in a monochromatic image, fills in the region.  I apply Laplace's
+   Equation to the region in two different ways.  The procedure smoothly
    propagates not only the intensity but also noise from the boundary to pixels
    in the interior of the region.
 
@@ -35,25 +35,22 @@ Using Laplace's Equation to Fill a Bounded Region of a Monochromatic Image%
    $T_S \subsetneq M$ is also a proper subset.  For any pixel $p \in M$, let
    $v_p$ be the original value of $p$.
 
-   The algorithm computes a new value $r_p$ for each pixel $p \in S$.  The new
+   The procedure computes a new value $r_p$ for each pixel $p \in S$.  The new
    value $r_p$ is computed on the basis of a solution to each of three
-   discrete-Dirichlet problems.  To wit:
+   discrete-Dirichlet problems.  Here is the procedure in outline:
    \begin{enumerate}
-      \item For each pixel $p \in S$, compute the value $a_p$ of the solution
-         to the discrete-Dirichlet problem for the boundary-values $\{v_q \: |
-         \: q \in B_S\}$.
-      \item For each pixel $p \in T_S$, compute the value $b_p$ of the solution
-         to the discrete-Dirichlet problem for the boundary-values $\{v_q \: |
-         \: q \in B_{T_S}\}$.
-      \item For each pixel $q \in B_S$, compute the value $\sigma_q = |b_q -
-         v_q|$, which is taken as an estimate of the standard deviation for
-         high-spatial-frequency noise at pixel $q$.
-      \item For each pixel $p \in S$, compute the value $\sigma_p$ of the
-         solution to the discrete-Dirichlet problem for the boundary-values
-         $\{\sigma_q \: | \: q \in B_S\}$.
-      \item For each pixel $p \in S$, compute the value $r_p = a_p + n_p$,
-         where $n_p$ is a random number drawn from the Gaussian distribution
-         whose standard deviation is $\sigma_p$.
+      \item For each pixel $p \in S$, compute the Dirichlet solution $a_p$ for
+         the boundary-values $\{v_q \: | \: q \in B_S\}$.
+      \item For each pixel $p \in T_S$, compute the Dirichlet solution $b_p$
+         for the boundary-values $\{v_q \: | \: q \in B_{T_S}\}$.
+      \item For each pixel $q \in B_S$, compute $\sigma_q = |b_q - v_q|$ as an
+         estimate of the standard deviation for high-spatial-frequency noise at
+         pixel $q$.
+      \item For each pixel $p \in S$, compute the Dirichlet solution $\sigma_p$
+         for the boundary-values $\{\sigma_q \: | \: q \in B_S\}$.
+      \item For each pixel $p \in S$, compute $r_p = a_p + n_p$, where $n_p$ is
+         a random number drawn from the Gaussian distribution whose standard
+         deviation is $\sigma_p$.
    \end{enumerate}
    For an image with noise on the pixel values, this approach produces a filled
    region that does not so obviously stand out to the eye as would merely using
@@ -90,7 +87,7 @@ probably around 1990.  The professor had given to the students a monochromatic
 image of a grassy field and the sky with some clouds.  At each of a half-dozen
 or so places in the image, he had painted a roughly circular patch of pixels a
 uniform shade of gray; each patch was perhaps 15 pixels across.  The homework
-had been to devise an algorithm to fill in each patch so that the filled patch
+had been to devise an procedure to fill in each patch so that the filled patch
 would appear minimally foreign to the surrounding image.  I don't recall my
 solution, but I do recall that I was not satisfied with any of my various
 attempts.  I feel as though I should remember having used Laplace's Equation if
