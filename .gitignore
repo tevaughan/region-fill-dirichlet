@@ -1,5 +1,5 @@
 trees-raw.pgm
-boundary.pgm
+mask.pgm
 regfill
 *.o
 .d

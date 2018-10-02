@@ -27,6 +27,7 @@ clean :
 	@rm -fv regfill
 	@rm -fv regfill.pdf
 	@rm -fv trees-raw.pgm
+	@rm -fv mask.pgm
 
 # http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 DEPDIR := .d
