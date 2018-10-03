@@ -26,6 +26,6 @@ propagate high-spatial-frequency noise from the boundary into the region.
 
 Here are some images from my work:
 
-![trees-mod1.png](trees-mod1.png)
 ![trees-mod3.png](trees-mod3.png)
+![trees-mod3-cut.png](trees-mod3-cut.png)
 
