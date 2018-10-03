@@ -131,5 +131,54 @@ with the mean intensity of the pixels originally inside the boundary.  His
 final solution appears in one of the zoomed-in images at the bottom of the
 figure.
 
+\section{Laplacian on Pixel Grid}
+
+\subsection{Difference Equation}
+
+\subsection{Solving the Linear System}
+
+\section{Estimating Noise at Boundary}
+
+\section{Application of Procedure}
+
+\section{Conclusion}
+
+For an image with dithering or pixel noise, the application of a noise estimate
+improves to the eye the result of the filling.
+
+My idea for future work involves modifying the difference-equation obeyed at
+each pixel.  Laplace's Equation is source-free and symmetric, but it should be
+possible to infer an appropriate asymmetry from the boundary.  An appropriate
+difference-equation should still be source-free but could allow a feature on
+one boundary to be propagated to the other boundary.
+
+For each of several directions in the plane, by scanning the boundary along
+that direction, one should be able to determine the particular direction $D$
+that has the maximum correlation between changes on one side of the region and
+changes on the opposite side of the region.  That is, after sorting the
+boundary pixels along the axis $D$, one will find that some boundary-pixel has
+minimum $D$-coordinate and some other has maximum $D$-coordinate.  Except at
+the end-points, at each step along $D$ between the end-points, there will be at
+least two boundary-pixels intersecting the line $P_D$ perpendicular to $D$.
+For the two boundary-locations $P_A$ and $P_B$ farthest from each other on each
+step $s$, calculate the difference $V_{A,s} - V_{A,s-1}$ or $V_{B,s} -
+V_{B,s-1}$ between the current value $V_{A,s}$ or $V_{B,s}$ at the boundary and
+the value $V_{A,s-1}$ or $V_{B,s-1}$, respectively, on the same side and on the
+previous step.  Multiply this value by the corresponding value on the opposite
+side of the boundary, and accumulate the result
+\begin{equation}
+   R = \sum_{s > 1} \left[V_{A,s} - V_{A,s-1}\right] \left[V_{B,s} -
+   V_{B,s-1}\right].
+\end{equation}
+The accumulated result $R$ for $D$ is the result that is higher than for any
+other direction.  Then make the difference equation favor mixing along the
+direction $P_D$.
+
+Thus the difference equation at every pixel could be modified to mix the
+current pixel's value not isotropically with that of neighboring pixels but
+anisotropically, so that the strongest features that can be correlated from one
+side of the boundary to the other will tend to propagate along a straight line
+through the region.
+
 \end{document}
 
