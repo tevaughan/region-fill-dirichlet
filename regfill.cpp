@@ -23,6 +23,18 @@ int main() {
   image t_mask(trees.num_cols(), trees.num_rows());
   s_mask.draw_polyline(vertices, 1.0);
   s_mask.fill({265, 163}, 1.0);
+  vector<pcoord> circ_verts;
+  pcoord const circ_cen{100, 100};
+  uint16_t const circ_rad = 10;
+  enum { N = 32 };
+  for (unsigned i = 0; i < N; ++i) {
+    double const a = 2.0 * i * M_PI / N;
+    uint16_t const col = circ_cen.col + circ_rad * cos(a);
+    uint16_t const row = circ_cen.row + circ_rad * sin(a);
+    circ_verts.push_back({col, row});
+  }
+  s_mask.draw_polyline(circ_verts, 1.0);
+  s_mask.fill(circ_cen, 1.0);
   image trees_mod1 = trees;
   trees_mod1.laplacian_fill(s_mask);
   trees_mod1.write("trees-mod1.pgm");

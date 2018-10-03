@@ -296,31 +296,53 @@ void image::laplacian_fill(image const &mask) {
   VectorXd b(n);
   using T = Triplet<double>;
   std::vector<T> coefs;
-  auto f = [&](pcoord p, unsigned i) {
+  auto f = [&](pcoord p, unsigned i, double w) {
     auto const it = m.find(lin(p));
     if (it == m.end()) {
-      b(i) += 0.25 * pixel(p);
+      b(i) += w * pixel(p);
     } else {
-      coefs.push_back({int(i), int(it->second), -0.25});
+      coefs.push_back({int(i), int(it->second), -w});
     }
   };
   int const nc = num_cols_;
   int const nr = num_rows();
+  double const w_side = 0.50/3.0;
+  double const w_diag = 0.25/3.0;
   for (unsigned i = 0; i < n; ++i) {
     coefs.push_back({int(i), int(i), 1.0});
     b(i) = 0.0;
     pcoord const cc = pc[i];
-    if (int(cc.col) < nc - 1) {
-      f({uint16_t(cc.col + 1), cc.row}, i);
+    bool const fr = (int(cc.col) < nc - 1);
+    bool const fb = (int(cc.row) < nr - 1);
+    bool const fl = (cc.col > 0);
+    bool const ft = (cc.row > 0);
+    uint16_t const col_r = cc.col + 1;
+    uint16_t const col_l = cc.col - 1;
+    uint16_t const row_b = cc.row + 1;
+    uint16_t const row_t = cc.row - 1;
+    if (fr) {
+      f({col_r, cc.row}, i, w_side);
+      if (fb) {
+        f({col_r, row_b}, i, w_diag);
+      }
+      if (ft) {
+        f({col_r, row_t}, i, w_diag);
+      }
     }
-    if (int(cc.row) < nr - 1) {
-      f({cc.col, uint16_t(cc.row + 1)}, i);
+    if (fb) {
+      f({cc.col, row_b}, i, w_side);
     }
-    if (cc.col > 0) {
-      f({uint16_t(cc.col - 1), cc.row}, i);
+    if (fl) {
+      f({col_l, cc.row}, i, w_side);
+      if (fb) {
+        f({col_l, row_b}, i, w_diag);
+      }
+      if (ft) {
+        f({col_l, row_t}, i, w_diag);
+      }
     }
-    if (cc.row > 0) {
-      f({cc.col, uint16_t(cc.row - 1)}, i);
+    if (ft) {
+      f({cc.col, row_t}, i, w_side);
     }
   }
   SparseMatrix<double> a(n, n);

@@ -1,8 +1,13 @@
 trees-raw.pgm
-mask.pgm
 regfill
 *.o
 .d
+noise.pgm
+s_mask.pgm
+t_mask.pgm
+trees-mod1.pgm
+trees-mod2.pgm
+trees-mod3.pgm
 
 ## Core latex/pdflatex auxiliary files:
 *.aux

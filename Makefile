@@ -28,6 +28,13 @@ clean :
 	@rm -fv regfill.pdf
 	@rm -fv trees-raw.pgm
 	@rm -fv mask.pgm
+	@rm -fv noise.pgm
+	@rm -fv s_mask.pgm
+	@rm -fv t_mask.pgm
+	@rm -fv trees-mod1.pgm
+	@rm -fv trees-mod2.pgm
+	@rm -fv trees-mod3.pgm
+
 
 # http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 DEPDIR := .d
