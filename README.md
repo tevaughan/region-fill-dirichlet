@@ -29,3 +29,5 @@ Here are some images from my work:
 ![trees-mod3.png](trees-mod3.png)
 ![trees-mod3-cut.png](trees-mod3-cut.png)
 
+Copyright 2018-2022 Thomas E. Vaughan.  See terms of redistribution in
+[LICENSE](LICENSE).

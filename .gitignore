@@ -1,13 +1,14 @@
-trees-raw.pgm
-regfill
 *.o
+.ccls-cache
 .d
 noise.pgm
+regfill
 s_mask.pgm
 t_mask.pgm
 trees-mod1.pgm
 trees-mod2.pgm
 trees-mod3.pgm
+trees-raw.pgm
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
