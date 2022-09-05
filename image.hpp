@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "pcoord.hpp"     // pccord
-#include "pgm-header.hpp" // pgm_header
-#include <cmath>
-#include <vector>
+#include "pcoord.hpp" // pcoord
+#include <iostream>   // istream, ostream
+#include <vector>     // vector
 
 namespace regfill {
 
@@ -18,10 +17,15 @@ using std::string;
 using std::vector;
 
 
-/// Gray-scale image.
+/// Gray-scale image that can be initialized from a PGM-file.
 class image {
   vector<float> pix_;      ///< Storage for pixel-values.
   unsigned      num_cols_; ///< Number of columns in image.
+
+  /// Linear offset of pixel.
+  /// \param p  Rectangular offsets of pixel.
+  /// \return   Linear offset of pixel.
+  unsigned lin(pcoord p) const;
 
 public:
   image()= default; ///< By default, don't initialize anything.
@@ -36,11 +40,6 @@ public:
   /// \param v   Default intensity for each pixel.
   image(uint16_t nc, uint16_t nr, float v= 0.0f):
       pix_(nc * nr, v), num_cols_(nc) {}
-
-  /// Linear offset of pixel.
-  /// \param p  Rectangular offsets of pixel.
-  /// \return   Linear offset of pixel.
-  unsigned lin(pcoord p) const;
 
   /// Read PGM-data from stream.
   /// \param is  Reference to input-stream.
@@ -116,6 +115,7 @@ public:
 
 } // namespace regfill
 
+#include "pgm-header.hpp"      // pgm_header
 #include <eigen3/Eigen/Dense>  // Triplet, VectorXd
 #include <eigen3/Eigen/Sparse> // SparseMatrix, SimplicialCholesky
 #include <fstream>             // ifstream, ofstream
