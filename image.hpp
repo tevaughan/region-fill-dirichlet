@@ -4,10 +4,9 @@
 
 #pragma once
 
-#include "pgm-header.hpp"
+#include "pcoord.hpp"     // pccord
+#include "pgm-header.hpp" // pgm_header
 #include <cmath>
-#include <eigen3/Eigen/Sparse>
-#include <fstream>
 #include <vector>
 
 namespace regfill {
@@ -17,23 +16,6 @@ using std::istream;
 using std::ostream;
 using std::string;
 using std::vector;
-
-
-/// Coordinates of pixel.
-struct pcoord {
-  uint16_t col; ///< Offset of column.
-  uint16_t row; ///< Offset of row.
-
-  /// Test equality of coordinates.
-  /// \param p  Other coordinates.
-  /// \return   True only if these coordinates match other coordinates.
-  bool operator==(pcoord p) const { return col == p.col && row == p.row; }
-
-  /// Test inequality of coordinates.
-  /// \param p  Other coordinates.
-  /// \return   True only if these coordinates do not match other coordinates.
-  bool operator!=(pcoord p) const { return col != p.col || row != p.row; }
-};
 
 
 /// Gray-scale image.
@@ -52,7 +34,8 @@ public:
   /// \param nc  Number of columns.
   /// \param nr  Number of rows.
   /// \param v   Default intensity for each pixel.
-  image(uint16_t nc, uint16_t nr, float v= 0.0f);
+  image(uint16_t nc, uint16_t nr, float v= 0.0f):
+      pix_(nc * nr, v), num_cols_(nc) {}
 
   /// Linear offset of pixel.
   /// \param p  Rectangular offsets of pixel.
@@ -131,15 +114,28 @@ public:
 };
 
 
+} // namespace regfill
+
+#include <eigen3/Eigen/Dense>  // Triplet, VectorXd
+#include <eigen3/Eigen/Sparse> // SparseMatrix, SimplicialCholesky
+#include <fstream>             // ifstream, ofstream
+
+namespace regfill {
+
+
+using Eigen::SimplicialCholesky;
+using Eigen::SparseMatrix;
+using Eigen::Triplet;
+using Eigen::VectorXd;
+using std::ifstream;
+using std::ofstream;
+
+
 inline image::image(string fn) {
-  std::ifstream ifs(fn);
+  ifstream ifs(fn);
   if(!ifs) { throw "problem opening '" + fn + "'"; }
   read(ifs);
 }
-
-
-inline image::image(uint16_t nc, uint16_t nr, float v):
-    pix_(nc * nr, v), num_cols_(nc) {}
 
 
 inline unsigned image::lin(pcoord p) const {
@@ -195,7 +191,7 @@ inline ostream &image::write(ostream &os) const {
 
 
 inline void image::write(string fn) const {
-  std::ofstream ofs(fn);
+  ofstream ofs(fn);
   if(!ofs) { throw format("error opening '%s' for output", fn.c_str()); }
   write(ofs);
 }
@@ -330,7 +326,6 @@ void image::laplacian_fill(image const &mask) {
   unsigned const               n = pc.size();
   std::map<unsigned, unsigned> m;
   for(unsigned i= 0; i < n; ++i) { m[lin(pc[i])]= i; }
-  using namespace Eigen;
   VectorXd b(n);
   using T= Triplet<double>;
   vector<T> coefs;
