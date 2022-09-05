@@ -1,6 +1,6 @@
-/// \author     Thomas E. Vaughan
+/// \file       pcoord.hpp
+/// \copyright  2018-2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Definition of regfill::pcoord.
-/// \copyright  2018-2022 Thomas E. Vaughan.
 
 #pragma once
 #include <cstdint> // uint16_t

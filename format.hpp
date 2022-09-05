@@ -1,12 +1,10 @@
 /// \file       format.hpp
-/// \author     Thomas E. Vaughan
+/// \copyright  2018-2022 Thomas E. Vaughan.  See terms in LICENSE.
 ///
 /// \brief      Definition of
 ///               regfill::impl::format_17_et_seq(),
 ///               regfill::impl::format_11-14(),
 ///               regfill::format().
-///
-/// \copyright  2018-2022 Thomas E. Vaughan.
 
 #pragma once
 

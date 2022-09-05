@@ -1,4 +1,5 @@
-/// \copyright  2018-2022 Thomas E. Vaughan
+/// \file       pgm-header.hpp
+/// \copyright  2018-2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Definition of regfill::pgm_header.
 
 #pragma once

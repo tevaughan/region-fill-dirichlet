@@ -1,6 +1,6 @@
-/// \author     Thomas E. Vaughan
-/// \brief      Definition of regfill::pcoord, regfill::image.
-/// \copyright  2018-2022 Thomas E. Vaughan.
+/// \file       image.hpp
+/// \copyright  2018-2022 Thomas E. Vaughan.  See terms in LICENSE.
+/// \brief      Definition of regfill::image.
 
 #pragma once
 
