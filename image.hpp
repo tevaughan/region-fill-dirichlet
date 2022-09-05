@@ -27,6 +27,27 @@ class image {
   /// \return   Linear offset of pixel.
   unsigned lin(pcoord p) const;
 
+  /// Rectangular offsets of pixel.
+  /// \param off  Linear offset of pixel.
+  /// \return     Rectangular offsets of pixel.
+  pcoord rct(unsigned off) const;
+
+  /// Draw line by stepping through columns.
+  /// This function will behave properly only if `|dc| >= |dr|`.
+  /// \param p   Rectangular offsets of starting point.
+  /// \param dc  Length of line in columns (may be negative).
+  /// \param dr  Length of line in rows (may be negative).
+  /// \param v   Intensity of pixels along line.
+  void draw_line_by_cols(pcoord p, float dc, float dr, float v);
+
+  /// Draw line by stepping through rows.
+  /// This function will behave properly only if `|dr| >= |dc|`.
+  /// \param p   Rectangular offsets of starting point.
+  /// \param dc  Length of line in columns (may be negative).
+  /// \param dr  Length of line in rows (may be negative).
+  /// \param v   Intensity of pixels along line.
+  void draw_line_by_rows(pcoord p, float dc, float dr, float v);
+
 public:
   image()= default; ///< By default, don't initialize anything.
 
@@ -104,8 +125,13 @@ public:
   vector<pcoord> threshold(float v= 0.0f) const;
 
   /// Find boundary of threshold-image above intensity v (zero by default).
+  ///
+  /// Visit every pixel.  If current pixel be not above threshold and if any of
+  /// four neighbors be above threshold, then mark current pixel as on
+  /// boundary.
+  ///
   /// \param v  Intensity of threshold.
-  /// \return   Coordinates of every along boundary of threshold-image.
+  /// \return   Coordinates of every pixel along boundary of threshold-image.
   vector<pcoord> boundary(float v= 0.0f) const;
 
   /// Use Laplace to fill pixels identified by nonzero pixels in mask.
@@ -197,6 +223,46 @@ inline void image::write(string fn) const {
 }
 
 
+inline void image::draw_line_by_cols(pcoord p, float dc, float dr, float v) {
+  float const m = dr / dc;
+  float const c2= p.col + dc;
+  float const r2= p.row + dr;
+  float       x1, x2, y1;
+  if(dc > 0.0f) {
+    x1= p.col;
+    x2= c2;
+    y1= p.row;
+  } else {
+    x1= c2;
+    x2= p.col;
+    y1= r2;
+  }
+  for(float x= x1; x < x2; x+= 1.0f) {
+    pixel({x + 0.5f, y1 + m * (x - x1) + 0.5f})= v;
+  }
+}
+
+
+inline void image::draw_line_by_rows(pcoord p, float dc, float dr, float v) {
+  float const m = dc / dr;
+  float const c2= p.col + dc;
+  float const r2= p.row + dr;
+  float       x1, x2, y1;
+  if(dr > 0.0f) {
+    x1= p.row;
+    x2= r2;
+    y1= p.col;
+  } else {
+    x1= r2;
+    x2= p.row;
+    y1= c2;
+  }
+  for(float x= x1; x < x2; x+= 1.0f) {
+    pixel({y1 + m * (x - x1) + 0.5f, x + 0.5f})= v;
+  }
+}
+
+
 inline void image::draw_polyline(vector<pcoord> p, float v) {
   if(p.size() == 0) { return; }
   if(p.front() != p.back()) { p.push_back(p.front()); }
@@ -205,53 +271,17 @@ inline void image::draw_polyline(vector<pcoord> p, float v) {
     pixel(p[i])= v; // Draw current end-point.
     unsigned j;
     for(j= i + 1; j < p.size(); ++j) {
-      if(p[j] != p[i]) {
-        break; // Found next point to draw to.
-      }
+      if(p[j] != p[i]) break; // Found next point to draw to.
     }
-    if(j == p.size()) {
-      break; // No next point to draw to.
-    }
-    double const c1 = p[i].col;
-    double const r1 = p[i].row;
-    double const c2 = p[j].col;
-    double const r2 = p[j].row;
-    double const dc = c2 - c1;
-    double const dr = r2 - r1;
-    double const adc= fabs(dc);
-    double const adr= fabs(dr);
+    if(j == p.size()) break; // No next point to draw to.
+    int const dc = int(p[j].col) - int(p[i].col);
+    int const dr = int(p[j].row) - int(p[i].row);
+    unsigned const adc= (dc < 0 ? -dc : +dc);
+    unsigned const adr= (dr < 0 ? -dr : +dr);
     if(adc > adr) {
-      double const m= dr / dc;
-      double       x1, x2, y1;
-      if(dc > 0.0) {
-        x1= c1;
-        x2= c2;
-        y1= r1;
-      } else {
-        x1= c2;
-        x2= c1;
-        y1= r2;
-      }
-      for(double x= x1; x < x2; x+= 1.0) {
-        double const y                               = y1 + m * (x - x1);
-        pixel({uint16_t(x + 0.5), uint16_t(y + 0.5)})= v;
-      }
+      draw_line_by_cols(p[i], dc, dr, v);
     } else {
-      double const m= dc / dr;
-      double       x1, x2, y1;
-      if(dr > 0.0) {
-        x1= r1;
-        x2= r2;
-        y1= c1;
-      } else {
-        x1= r2;
-        x2= r1;
-        y1= c2;
-      }
-      for(double x= x1; x < x2; x+= 1.0) {
-        double const y                               = y1 + m * (x - x1);
-        pixel({uint16_t(y + 0.5), uint16_t(x + 0.5)})= v;
-      }
+      draw_line_by_rows(p[i], dc, dr, v);
     }
     i= j;
   } while(i < p.size());
@@ -284,30 +314,33 @@ vector<pcoord> image::threshold(float v) const {
 }
 
 
+pcoord image::rct(unsigned off) const {
+  uint16_t const c= off % num_cols_;
+  uint16_t const r= off / num_cols_;
+  return {c, r};
+}
+
+
 vector<pcoord> image::boundary(float v) const {
   vector<pcoord> b;
   int const      nc= num_cols_;
   int const      nr= num_rows();
-  for(auto i= pix_.cbegin(); i != pix_.end(); ++i) {
-    if(*i > v) { continue; }
-    unsigned const off= i - pix_.begin();
-    uint16_t const c  = off % num_cols_;
-    uint16_t const r  = off / num_cols_;
-    if(int(c) < nc - 1 && pixel({uint16_t(c + 1), r}) > v) {
-      b.push_back({c, r});
-      continue;
-    }
-    if(int(r) < nr - 1 && pixel({c, uint16_t(r + 1)}) > v) {
-      b.push_back({c, r});
-      continue;
-    }
-    if(c > 0 && pixel({uint16_t(c - 1), r}) > v) {
-      b.push_back({c, r});
-      continue;
-    }
-    if(r > 0 && pixel({c, uint16_t(r - 1)}) > v) {
-      b.push_back({c, r});
-      continue;
+  for(auto i= pix_.begin(); i != pix_.end(); ++i) {
+    // Do nothing on current iteration if current pixel be above threshold.
+    if(*i > v) continue;
+    // Current pixel is *not* above threshold.  So if neighbor be above
+    // threshold, then mark current pixel as on boundary.
+    pcoord const p= rct(i - pix_.begin());
+    int const    c= p.col;
+    int const    r= p.row;
+    if(c < nc - 1 && pixel({c + 1, r}) > v) {
+      b.push_back(p);
+    } else if(r < nr - 1 && pixel({c, r + 1}) > v) {
+      b.push_back(p);
+    } else if(c > 0 && pixel({c - 1, r}) > v) {
+      b.push_back(p);
+    } else if(r > 0 && pixel({c, r - 1}) > v) {
+      b.push_back(p);
     }
   }
   return b;
