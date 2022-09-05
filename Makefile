@@ -3,16 +3,9 @@
 
 CXXFLAGS = -Wall -g
 
-# http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
-SRCS = regfill.cpp
-CC = $(CXX)
-
 .PHONY: all clean
 
 all : regfill.pdf regfill
-
-# http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
-regfill : regfill.o
 
 regfill.pdf : regfill.tex trees-raw.pgm
 	pdflatex $<
@@ -37,8 +30,10 @@ clean :
 	@rm -fv trees-mod2.pgm
 	@rm -fv trees-mod3.pgm
 
-
 # http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
+SRCS = regfill.cpp
+CC = $(CXX)
+regfill : regfill.o
 DEPDIR := .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
