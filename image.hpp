@@ -156,7 +156,7 @@ public:
 #include "neighbors.hpp"        // neighbors
 #include "pgm-header.hpp"       // pgm_header
 #include "threshold-coords.hpp" // threshold_coords
-#include <eigen3/Eigen/Dense>   // Triplet, VectorXd
+#include <eigen3/Eigen/Dense>   // VectorXd
 #include <eigen3/Eigen/Sparse>  // SparseMatrix, SimplicialCholesky
 #include <fstream>              // ifstream, ofstream
 
@@ -165,10 +165,8 @@ namespace regfill {
 
 using Eigen::SimplicialCholesky;
 using Eigen::SparseMatrix;
-using Eigen::Triplet;
 using Eigen::VectorXd;
 using std::ifstream;
-using std::map;
 using std::ofstream;
 
 
