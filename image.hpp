@@ -152,6 +152,7 @@ public:
 
 } // namespace regfill
 
+#include "cholesky-coefs.hpp"   // cholesky_coefs
 #include "neighbors.hpp"        // neighbors
 #include "pgm-header.hpp"       // pgm_header
 #include "threshold-coords.hpp" // threshold_coords
@@ -367,57 +368,6 @@ void image::check_mask_size(image const &mask) {
     throw format("%ux%u for image, but %ux%u for mask", inc, inr, mnc, mnr);
   }
 }
-
-
-class cholesky_coefs {
-  image const &           im_;
-  threshold_coords        thresh_;
-  VectorXd                b_;
-  vector<Triplet<double>> coefs_;
-
-  void f(pcoord p, unsigned i, double w) {
-    auto const it= thresh_.map().find(im_.lin(p));
-    if(it == thresh_.map().end()) {
-      b_(i)+= w * im_.pixel(p);
-    } else {
-      coefs_.push_back({int(i), int(it->second), -w});
-    }
-  }
-
-  constexpr static double w_side() { return 0.50 / 3.0; }
-  constexpr static double w_diag() { return 0.25 / 3.0; }
-
-public:
-  /// Initialize from coordinates above threshold in mask.
-  cholesky_coefs(image const &im, image const &mask):
-      im_(im), thresh_(mask), b_(thresh_.crd().size()) {
-    int const nc= mask.num_cols();
-    int const nr= mask.num_rows();
-    for(unsigned i= 0; i < thresh_.crd().size(); ++i) {
-      b_(i)= 0.0;
-      coefs_.push_back({int(i), int(i), 1.0});
-      pcoord const    cc= thresh_.crd()[i];
-      neighbors const nb(nc, nr, cc);
-      if(nb.fb) f({cc.col, nb.rb}, i, w_side());
-      if(nb.ft) f({cc.col, nb.rt}, i, w_side());
-      if(nb.fr) {
-        f({nb.cr, cc.row}, i, w_side());
-        if(nb.fb) f({nb.cr, nb.rb}, i, w_diag());
-        if(nb.ft) f({nb.cr, nb.rt}, i, w_diag());
-      }
-      if(nb.fl) {
-        f({nb.cl, cc.row}, i, w_side());
-        if(nb.fb) f({nb.cl, nb.rb}, i, w_diag());
-        if(nb.ft) f({nb.cl, nb.rt}, i, w_diag());
-      }
-    }
-  }
-
-  auto        begin() const { return coefs_.begin(); }
-  auto        end() const { return coefs_.end(); }
-  auto const &thresh() const { return thresh_; }
-  auto const &b() const { return b_; }
-};
 
 
 void image::laplacian_fill(image const &mask) {
