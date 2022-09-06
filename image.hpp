@@ -22,11 +22,6 @@ class image {
   vector<float> pix_;      ///< Storage for pixel-values.
   unsigned      num_cols_; ///< Number of columns in image.
 
-  /// Linear offset of pixel.
-  /// \param p  Rectangular offsets of pixel.
-  /// \return   Linear offset of pixel.
-  unsigned lin(pcoord p) const;
-
   /// Rectangular offsets of pixel.
   /// \param off  Linear offset of pixel.
   /// \return     Rectangular offsets of pixel.
@@ -66,6 +61,11 @@ public:
   /// \param v   Default intensity for each pixel.
   image(uint16_t nc, uint16_t nr, float v= 0.0f):
       pix_(nc * nr, v), num_cols_(nc) {}
+
+  /// Linear offset of pixel.
+  /// \param p  Rectangular offsets of pixel.
+  /// \return   Linear offset of pixel.
+  unsigned lin(pcoord p) const;
 
   /// Read PGM-data from stream.
   /// \param is  Reference to input-stream.
@@ -313,22 +313,19 @@ inline void image::fill(pcoord p, float v) {
 }
 
 
-vector<pcoord> image::threshold(float v) const {
-  vector<pcoord> s;
-  for(auto i= pix_.cbegin(); i != pix_.end(); ++i) {
-    if(*i > v) {
-      unsigned const off= i - pix_.begin();
-      s.push_back({uint16_t(off % num_cols_), uint16_t(off / num_cols_)});
-    }
-  }
-  return s;
-}
-
-
 pcoord image::rct(unsigned off) const {
   uint16_t const c= off % num_cols_;
   uint16_t const r= off / num_cols_;
   return {c, r};
+}
+
+
+vector<pcoord> image::threshold(float v) const {
+  vector<pcoord> s;
+  for(auto i= pix_.cbegin(); i != pix_.end(); ++i) {
+    if(*i > v) s.push_back(rct(i - pix_.begin()));
+  }
+  return s;
 }
 
 
@@ -369,57 +366,79 @@ void image::check_mask_size(image const &mask) {
 }
 
 
+class cholesky_coefs {
+  map<unsigned, unsigned> m_;
+  image const &           im_;
+  vector<pcoord>          pc_;
+  unsigned                n_;
+  VectorXd                b_;
+  vector<Triplet<double>> coefs_;
+
+  void f(pcoord p, unsigned i, double w) {
+    auto const it= m_.find(im_.lin(p));
+    if(it == m_.end()) {
+      b_(i)+= w * im_.pixel(p);
+    } else {
+      coefs_.push_back({int(i), int(it->second), -w});
+    }
+  }
+
+public:
+  /// Initialize from coordinates above threshold in mask.
+  cholesky_coefs(image const &im, image const &mask):
+      im_(im), pc_(mask.threshold()), n_(pc_.size()), b_(n_) {
+    for(unsigned i= 0; i < n_; ++i) m_[mask.lin(pc_[i])]= i;
+    int const        nc    = mask.num_cols();
+    int const        nr    = mask.num_rows();
+    constexpr double w_side= 0.50 / 3.0;
+    constexpr double w_diag= 0.25 / 3.0;
+    for(unsigned i= 0; i < n_; ++i) {
+      coefs_.push_back({int(i), int(i), 1.0});
+      b_(i)               = 0.0;
+      pcoord const   cc   = pc_[i];
+      uint16_t const row_b= cc.row + 1;
+      uint16_t const row_t= cc.row - 1;
+
+      bool const fb= (int(cc.row) < nr - 1);
+      if(fb) f({cc.col, row_b}, i, w_side);
+
+      bool const ft= (cc.row > 0);
+      if(ft) f({cc.col, row_t}, i, w_side);
+
+      bool const fr= (int(cc.col) < nc - 1);
+      if(fr) {
+        uint16_t const col_r= cc.col + 1;
+        f({col_r, cc.row}, i, w_side);
+        if(fb) f({col_r, row_b}, i, w_diag);
+        if(ft) f({col_r, row_t}, i, w_diag);
+      }
+
+      bool const fl= (cc.col > 0);
+      if(fl) {
+        uint16_t const col_l= cc.col - 1;
+        f({col_l, cc.row}, i, w_side);
+        if(fb) f({col_l, row_b}, i, w_diag);
+        if(ft) f({col_l, row_t}, i, w_diag);
+      }
+    }
+  }
+
+  auto                  begin() const { return coefs_.begin(); }
+  auto                  end() const { return coefs_.end(); }
+  vector<pcoord> const &pc() const { return pc_; }
+  unsigned              n() const { return n_; }
+  VectorXd const &      b() const { return b_; }
+};
+
+
 void image::laplacian_fill(image const &mask) {
   check_mask_size(mask);
-  auto const              pc= mask.threshold();
-  unsigned const          n = pc.size();
-  map<unsigned, unsigned> m;
-  for(unsigned i= 0; i < n; ++i) { m[lin(pc[i])]= i; }
-  VectorXd b(n);
-  using T= Triplet<double>;
-  vector<T> coefs;
-  auto      f= [&](pcoord p, unsigned i, double w) {
-    auto const it= m.find(lin(p));
-    if(it == m.end()) {
-      b(i)+= w * pixel(p);
-    } else {
-      coefs.push_back({int(i), int(it->second), -w});
-    }
-  };
-  int const    nc    = num_cols_;
-  int const    nr    = num_rows();
-  double const w_side= 0.50 / 3.0;
-  double const w_diag= 0.25 / 3.0;
-  for(unsigned i= 0; i < n; ++i) {
-    coefs.push_back({int(i), int(i), 1.0});
-    b(i)                = 0.0;
-    pcoord const   cc   = pc[i];
-    bool const     fr   = (int(cc.col) < nc - 1);
-    bool const     fb   = (int(cc.row) < nr - 1);
-    bool const     fl   = (cc.col > 0);
-    bool const     ft   = (cc.row > 0);
-    uint16_t const col_r= cc.col + 1;
-    uint16_t const col_l= cc.col - 1;
-    uint16_t const row_b= cc.row + 1;
-    uint16_t const row_t= cc.row - 1;
-    if(fr) {
-      f({col_r, cc.row}, i, w_side);
-      if(fb) f({col_r, row_b}, i, w_diag);
-      if(ft) f({col_r, row_t}, i, w_diag);
-    }
-    if(fb) f({cc.col, row_b}, i, w_side);
-    if(fl) {
-      f({col_l, cc.row}, i, w_side);
-      if(fb) f({col_l, row_b}, i, w_diag);
-      if(ft) f({col_l, row_t}, i, w_diag);
-    }
-    if(ft) f({cc.col, row_t}, i, w_side);
-  }
-  SparseMatrix<double> a(n, n);
+  cholesky_coefs       coefs(*this, mask);
+  SparseMatrix<double> a(coefs.n(), coefs.n());
   a.setFromTriplets(coefs.begin(), coefs.end());
   SimplicialCholesky<SparseMatrix<double>> chol(a);
-  VectorXd const                           x= chol.solve(b);
-  for(unsigned i= 0; i < n; ++i) { pixel(pc[i])= x[i]; }
+  VectorXd const                           x= chol.solve(coefs.b());
+  for(unsigned i= 0; i < coefs.n(); ++i) { pixel(coefs.pc()[i])= x[i]; }
 }
 
 
