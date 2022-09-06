@@ -48,6 +48,11 @@ class image {
   /// \param v   Intensity of pixels along line.
   void draw_line_by_rows(pcoord p, float dc, float dr, float v);
 
+  /// Check that `mask` has same size as this image.
+  /// Throw exception if `mask` be of different size.
+  /// \param mask  Mask used by laplacian_fill().
+  void check_mask_size(image const &mask);
+
 public:
   image()= default; ///< By default, don't initialize anything.
 
@@ -124,17 +129,22 @@ public:
   /// \return   Coordinates of every pixel with intensity greater than `v`.
   vector<pcoord> threshold(float v= 0.0f) const;
 
-  /// Find boundary of threshold-image above intensity v (zero by default).
-  ///
-  /// Visit every pixel.  If current pixel be not above threshold and if any of
-  /// four neighbors be above threshold, then mark current pixel as on
-  /// boundary.
-  ///
+  /// Find every pixel that has both
+  /// (1) its value *not* above threshold intensity `v` and
+  /// (2) at least one of four neighbors whose value *is* above `v`.
   /// \param v  Intensity of threshold.
   /// \return   Coordinates of every pixel along boundary of threshold-image.
   vector<pcoord> boundary(float v= 0.0f) const;
 
-  /// Use Laplace to fill pixels identified by nonzero pixels in mask.
+  /// Use Laplace to interpolate pixels identified by nonzero pixels in mask.
+  ///
+  /// `mask` must be image of same size as this image.
+  ///
+  /// After function returns, this image has been modified by interpolation.
+  /// Every pixel in this image has been interpolated if the corresponding
+  /// pixel in `mask` have nonzero intensity.
+  ///
+  /// \param mask  Image indicating which pixels in this image to interpolate.
   void laplacian_fill(image const &mask);
 };
 
@@ -154,6 +164,7 @@ using Eigen::SparseMatrix;
 using Eigen::Triplet;
 using Eigen::VectorXd;
 using std::ifstream;
+using std::map;
 using std::ofstream;
 
 
@@ -274,8 +285,8 @@ inline void image::draw_polyline(vector<pcoord> p, float v) {
       if(p[j] != p[i]) break; // Found next point to draw to.
     }
     if(j == p.size()) break; // No next point to draw to.
-    int const dc = int(p[j].col) - int(p[i].col);
-    int const dr = int(p[j].row) - int(p[i].row);
+    int const      dc = int(p[j].col) - int(p[i].col);
+    int const      dr = int(p[j].row) - int(p[i].row);
     unsigned const adc= (dc < 0 ? -dc : +dc);
     unsigned const adr= (dr < 0 ? -dr : +dr);
     if(adc > adr) {
@@ -347,7 +358,7 @@ vector<pcoord> image::boundary(float v) const {
 }
 
 
-void image::laplacian_fill(image const &mask) {
+void image::check_mask_size(image const &mask) {
   uint16_t const inc= num_cols();
   uint16_t const inr= num_rows();
   uint16_t const mnc= mask.num_cols();
@@ -355,9 +366,14 @@ void image::laplacian_fill(image const &mask) {
   if(inc != mnc || inr != mnr) {
     throw format("%ux%u for image, but %ux%u for mask", inc, inr, mnc, mnr);
   }
-  auto const                   pc= mask.threshold();
-  unsigned const               n = pc.size();
-  std::map<unsigned, unsigned> m;
+}
+
+
+void image::laplacian_fill(image const &mask) {
+  check_mask_size(mask);
+  auto const              pc= mask.threshold();
+  unsigned const          n = pc.size();
+  map<unsigned, unsigned> m;
   for(unsigned i= 0; i < n; ++i) { m[lin(pc[i])]= i; }
   VectorXd b(n);
   using T= Triplet<double>;
@@ -388,16 +404,16 @@ void image::laplacian_fill(image const &mask) {
     uint16_t const row_t= cc.row - 1;
     if(fr) {
       f({col_r, cc.row}, i, w_side);
-      if(fb) { f({col_r, row_b}, i, w_diag); }
-      if(ft) { f({col_r, row_t}, i, w_diag); }
+      if(fb) f({col_r, row_b}, i, w_diag);
+      if(ft) f({col_r, row_t}, i, w_diag);
     }
-    if(fb) { f({cc.col, row_b}, i, w_side); }
+    if(fb) f({cc.col, row_b}, i, w_side);
     if(fl) {
       f({col_l, cc.row}, i, w_side);
-      if(fb) { f({col_l, row_b}, i, w_diag); }
-      if(ft) { f({col_l, row_t}, i, w_diag); }
+      if(fb) f({col_l, row_b}, i, w_diag);
+      if(ft) f({col_l, row_t}, i, w_diag);
     }
-    if(ft) { f({cc.col, row_t}, i, w_side); }
+    if(ft) f({cc.col, row_t}, i, w_side);
   }
   SparseMatrix<double> a(n, n);
   a.setFromTriplets(coefs.begin(), coefs.end());
