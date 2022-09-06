@@ -2,7 +2,8 @@
 /// \copyright  2018-2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Definition of regfill::image.
 
-#pragma once
+#ifndef REGFILL_IMAGE_HPP
+#define REGFILL_IMAGE_HPP
 
 #include "pcoord.hpp" // pcoord
 #include <iostream>   // istream, ostream
@@ -151,10 +152,11 @@ public:
 
 } // namespace regfill
 
-#include "pgm-header.hpp"      // pgm_header
-#include <eigen3/Eigen/Dense>  // Triplet, VectorXd
-#include <eigen3/Eigen/Sparse> // SparseMatrix, SimplicialCholesky
-#include <fstream>             // ifstream, ofstream
+#include "pgm-header.hpp"       // pgm_header
+#include "threshold-coords.hpp" // threshold_coords
+#include <eigen3/Eigen/Dense>   // Triplet, VectorXd
+#include <eigen3/Eigen/Sparse>  // SparseMatrix, SimplicialCholesky
+#include <fstream>              // ifstream, ofstream
 
 namespace regfill {
 
@@ -366,43 +368,6 @@ void image::check_mask_size(image const &mask) {
 }
 
 
-/// Coordinates above threshold in mask.
-class threshold {
-  /// List of coordinates above threshold in mask.
-  vector<pcoord> crd_;
-
-  /// Type for
-  /// (a) linear offset of pixel in mask and
-  /// (b) key in m_.
-  using pix_offset= unsigned;
-
-  /// Type for
-  /// (a) linear offset of pixel's coordinates in crd_ and
-  /// (b) value in m_.
-  using crd_offset= unsigned;
-
-  /// For each pixel above threshold in mask, map from linear offset of pixel
-  /// in mask to linear offset of pixel's coordinates in crd_.
-  std::map<pix_offset, crd_offset> map_;
-
-public:
-  threshold(image const &mask): crd_(mask.threshold()) {
-    for(unsigned i= 0; i < crd_.size(); ++i) map_[mask.lin(crd_[i])]= i;
-  }
-
-  /// List of coordinates above threshold in mask.
-  /// \return  List of coordinates above threshold in mask.
-  auto const &crd() const { return crd_; }
-
-  /// For each pixel above threshold in mask, map from linear offset of pixel
-  /// in mask to linear offset of pixel's coordinates in crd_.
-  ///
-  /// \return  Map from linear offset of pixel in mask to linear offset of
-  ///          pixel's coordinates in list of coordinates above threshold.
-  auto const &map() const { return map_; }
-};
-
-
 /// Offsets and flags for neighbors of a pixel.
 struct neighbors {
   uint16_t const rb; ///< Row-offset below central pixel.
@@ -433,7 +398,7 @@ public:
 
 class cholesky_coefs {
   image const &           im_;
-  threshold               thresh_;
+  threshold_coords        thresh_;
   VectorXd                b_;
   vector<Triplet<double>> coefs_;
 
@@ -503,5 +468,7 @@ void image::laplacian_fill(image const &mask) {
 
 
 } // namespace regfill
+
+#endif // ndef REGFILL_IMAGE_HPP
 
 // EOF
