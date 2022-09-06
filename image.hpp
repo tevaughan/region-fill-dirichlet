@@ -366,79 +366,139 @@ void image::check_mask_size(image const &mask) {
 }
 
 
+/// Coordinates above threshold in mask.
+class threshold {
+  /// List of coordinates above threshold in mask.
+  vector<pcoord> crd_;
+
+  /// Type for
+  /// (a) linear offset of pixel in mask and
+  /// (b) key in m_.
+  using pix_offset= unsigned;
+
+  /// Type for
+  /// (a) linear offset of pixel's coordinates in crd_ and
+  /// (b) value in m_.
+  using crd_offset= unsigned;
+
+  /// For each pixel above threshold in mask, map from linear offset of pixel
+  /// in mask to linear offset of pixel's coordinates in crd_.
+  std::map<pix_offset, crd_offset> map_;
+
+public:
+  threshold(image const &mask): crd_(mask.threshold()) {
+    for(unsigned i= 0; i < crd_.size(); ++i) map_[mask.lin(crd_[i])]= i;
+  }
+
+  /// List of coordinates above threshold in mask.
+  /// \return  List of coordinates above threshold in mask.
+  auto const &crd() const { return crd_; }
+
+  /// For each pixel above threshold in mask, map from linear offset of pixel
+  /// in mask to linear offset of pixel's coordinates in crd_.
+  ///
+  /// \return  Map from linear offset of pixel in mask to linear offset of
+  ///          pixel's coordinates in list of coordinates above threshold.
+  auto const &map() const { return map_; }
+};
+
+
+/// Offsets and flags for neighbors of a pixel.
+struct neighbors {
+  uint16_t const rb; ///< Row-offset below central pixel.
+  uint16_t const rt; ///< Row-offset above central pixel.
+  uint16_t const cl; ///< Column-offset left of central pixel.
+  uint16_t const cr; ///< Column-offset right of central pixel.
+  bool const     fb; ///< True only if there be row below central pixel.
+  bool const     ft; ///< True only if there be row above central pixel.
+  bool const     fl; ///< True only if there be column left of central pixel.
+  bool const     fr; ///< True only if there be column right of central pixel.
+
+public:
+  /// Initialize offsets and flags for neighbors.
+  /// \param nc   Number of columns in mask.
+  /// \param nr   Number of rows in mask.
+  /// \param cen  Rectangular coordinates of pixel central to neighbors.
+  neighbors(int nc, int nr, pcoord cen):
+      rb(cen.row + 1),
+      rt(cen.row - 1),
+      cl(cen.col - 1),
+      cr(cen.col + 1),
+      fb(int(cen.row) < nr - 1),
+      ft(cen.row > 0),
+      fl(cen.col > 0),
+      fr(int(cen.col) < nc - 1) {}
+};
+
+
 class cholesky_coefs {
-  map<unsigned, unsigned> m_;
   image const &           im_;
-  vector<pcoord>          pc_;
-  unsigned                n_;
+  threshold               thresh_;
   VectorXd                b_;
   vector<Triplet<double>> coefs_;
 
   void f(pcoord p, unsigned i, double w) {
-    auto const it= m_.find(im_.lin(p));
-    if(it == m_.end()) {
+    auto const it= thresh_.map().find(im_.lin(p));
+    if(it == thresh_.map().end()) {
       b_(i)+= w * im_.pixel(p);
     } else {
       coefs_.push_back({int(i), int(it->second), -w});
     }
   }
 
+  constexpr static double w_side() { return 0.50 / 3.0; }
+  constexpr static double w_diag() { return 0.25 / 3.0; }
+
 public:
   /// Initialize from coordinates above threshold in mask.
   cholesky_coefs(image const &im, image const &mask):
-      im_(im), pc_(mask.threshold()), n_(pc_.size()), b_(n_) {
-    for(unsigned i= 0; i < n_; ++i) m_[mask.lin(pc_[i])]= i;
-    int const        nc    = mask.num_cols();
-    int const        nr    = mask.num_rows();
-    constexpr double w_side= 0.50 / 3.0;
-    constexpr double w_diag= 0.25 / 3.0;
-    for(unsigned i= 0; i < n_; ++i) {
+      im_(im), thresh_(mask), b_(thresh_.crd().size()) {
+    int const nc= mask.num_cols();
+    int const nr= mask.num_rows();
+    for(unsigned i= 0; i < thresh_.crd().size(); ++i) {
+      b_(i)= 0.0;
       coefs_.push_back({int(i), int(i), 1.0});
-      b_(i)               = 0.0;
-      pcoord const   cc   = pc_[i];
-      uint16_t const row_b= cc.row + 1;
-      uint16_t const row_t= cc.row - 1;
-
-      bool const fb= (int(cc.row) < nr - 1);
-      if(fb) f({cc.col, row_b}, i, w_side);
-
-      bool const ft= (cc.row > 0);
-      if(ft) f({cc.col, row_t}, i, w_side);
-
-      bool const fr= (int(cc.col) < nc - 1);
-      if(fr) {
-        uint16_t const col_r= cc.col + 1;
-        f({col_r, cc.row}, i, w_side);
-        if(fb) f({col_r, row_b}, i, w_diag);
-        if(ft) f({col_r, row_t}, i, w_diag);
+      pcoord const    cc= thresh_.crd()[i];
+      neighbors const nb(nc, nr, cc);
+      if(nb.fb) f({cc.col, nb.rb}, i, w_side());
+      if(nb.ft) f({cc.col, nb.rt}, i, w_side());
+      if(nb.fr) {
+        f({nb.cr, cc.row}, i, w_side());
+        if(nb.fb) f({nb.cr, nb.rb}, i, w_diag());
+        if(nb.ft) f({nb.cr, nb.rt}, i, w_diag());
       }
-
-      bool const fl= (cc.col > 0);
-      if(fl) {
-        uint16_t const col_l= cc.col - 1;
-        f({col_l, cc.row}, i, w_side);
-        if(fb) f({col_l, row_b}, i, w_diag);
-        if(ft) f({col_l, row_t}, i, w_diag);
+      if(nb.fl) {
+        f({nb.cl, cc.row}, i, w_side());
+        if(nb.fb) f({nb.cl, nb.rb}, i, w_diag());
+        if(nb.ft) f({nb.cl, nb.rt}, i, w_diag());
       }
     }
   }
 
-  auto                  begin() const { return coefs_.begin(); }
-  auto                  end() const { return coefs_.end(); }
-  vector<pcoord> const &pc() const { return pc_; }
-  unsigned              n() const { return n_; }
-  VectorXd const &      b() const { return b_; }
+  auto        begin() const { return coefs_.begin(); }
+  auto        end() const { return coefs_.end(); }
+  auto const &thresh() const { return thresh_; }
+  auto const &b() const { return b_; }
 };
 
 
 void image::laplacian_fill(image const &mask) {
   check_mask_size(mask);
-  cholesky_coefs       coefs(*this, mask);
-  SparseMatrix<double> a(coefs.n(), coefs.n());
+  // Calculate coefficients for matrix.
+  cholesky_coefs coefs(*this, mask);
+  // Get list of coordinates above threshold in mask.
+  auto const &crd= coefs.thresh().crd();
+  // Get number of coordinates above threshold in mask.
+  unsigned const n= crd.size();
+  // Set up sparse matrix.
+  using mat= SparseMatrix<double>;
+  mat a(n, n);
   a.setFromTriplets(coefs.begin(), coefs.end());
-  SimplicialCholesky<SparseMatrix<double>> chol(a);
-  VectorXd const                           x= chol.solve(coefs.b());
-  for(unsigned i= 0; i < coefs.n(); ++i) { pixel(coefs.pc()[i])= x[i]; }
+  SimplicialCholesky<mat> chol(a);
+  // Solve linear system.
+  VectorXd const x= chol.solve(coefs.b());
+  // Copy filled values into image.
+  for(unsigned i= 0; i < n; ++i) { pixel(crd[i])= x[i]; }
 }
 
 
