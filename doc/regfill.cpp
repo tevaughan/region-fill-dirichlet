@@ -2,7 +2,7 @@
 /// \copyright  2018-2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Program that fills region of test-image in various ways.
 
-#include "image.hpp"
+#include "regfill/image.hpp"
 #include <random>
 
 using namespace regfill;

@@ -15,8 +15,8 @@ Equation](https://blogs.mathworks.com/steve/2015/06/17/region-filling-and-laplac
 
 Here are some images from that blog post:
 
-![exploring_regionfill_01.png](exploring_regionfill_01.png)
-![exploring_regionfill_12.png](exploring_regionfill_12.png)
+![exploring_regionfill_01.png](doc/exploring_regionfill_01.png)
+![exploring_regionfill_12.png](doc/exploring_regionfill_12.png)
 
 My contribution is, first of all, to provide a solution that depends not at all
 on proprietary software like Matlab.  Rather, I use C++ and
@@ -26,8 +26,8 @@ propagate high-spatial-frequency noise from the boundary into the region.
 
 Here are some images from my work:
 
-![trees-mod3.png](trees-mod3.png)
-![trees-mod3-cut.png](trees-mod3-cut.png)
+![trees-mod3.png](doc/trees-mod3.png)
+![trees-mod3-cut.png](doc/trees-mod3-cut.png)
 
 Copyright 2018-2022 Thomas E. Vaughan.  See terms of redistribution in
 [LICENSE](LICENSE).

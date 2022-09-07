@@ -1,7 +1,8 @@
 # Copyright 2018-2022 Thomas E. Vaughan
 # See LICENSE for terms of distribution.
 
-CXXFLAGS = -Wall -g
+CXXFLAGS:= -Wall -g
+CPPFLAGS:= -I../include
 
 .PHONY: all clean
 
