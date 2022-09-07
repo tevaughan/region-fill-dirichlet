@@ -5,7 +5,7 @@
 #ifndef REGFILL_NEIGHBORS_HPP
 #define REGFILL_NEIGHBORS_HPP
 
-#include "pcoord.hpp" // pcoord
+#include "coords.hpp" // coords
 #include <cstdint>    // uint16_t
 
 namespace regfill {
@@ -27,7 +27,7 @@ public:
   /// \param nc   Number of columns in mask.
   /// \param nr   Number of rows in mask.
   /// \param cen  Rectangular coordinates of pixel central to neighbors.
-  neighbors(int nc, int nr, pcoord cen):
+  neighbors(int nc, int nr, coords cen):
       rb(cen.row + 1),
       rt(cen.row - 1),
       cl(cen.col - 1),

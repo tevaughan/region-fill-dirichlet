@@ -9,7 +9,7 @@ using namespace regfill;
 using namespace std;
 
 
-static vector<pcoord> vertices{
+static vector<coords> vertices{
       {240, 155},
       {245, 164},
       {255, 170},
@@ -22,8 +22,8 @@ static vector<pcoord> vertices{
       {240, 155}};
 
 
-static pcoord const zoom_tl{230, 140};
-static pcoord const zoom_br{300, 180};
+static coords const zoom_tl{230, 140};
+static coords const zoom_br{300, 180};
 
 
 int main() {
@@ -33,12 +33,12 @@ int main() {
     vertices[i].row-= 1;
   }
   image trees("trees-raw.pgm");
-  image s_mask(trees.num_cols(), trees.num_rows());
-  image t_mask(trees.num_cols(), trees.num_rows());
+  image s_mask(trees.size().cols(), trees.size().rows());
+  image t_mask(trees.size().cols(), trees.size().rows());
   s_mask.draw_polyline(vertices, 1.0);
   s_mask.fill({265, 163}, 1.0);
-  vector<pcoord> circ_verts;
-  pcoord const   circ_cen{100, 100};
+  vector<coords> circ_verts;
+  coords const   circ_cen{100, 100};
   uint16_t const circ_rad= 10;
   enum { N= 32 };
   for(unsigned i= 0; i < N; ++i) {
@@ -61,7 +61,7 @@ int main() {
   image trees_mod2= trees;
   trees_mod2.laplacian_fill(t_mask);
   trees_mod2.write("trees-mod2.pgm");
-  image noise(trees.num_cols(), trees.num_rows());
+  image noise(trees.size().cols(), trees.size().rows());
   for(auto p: b) { noise(p)= fabs(trees_mod2(p) - trees_mod1(p)); }
   noise.laplacian_fill(s_mask);
   noise.write("noise.pgm");

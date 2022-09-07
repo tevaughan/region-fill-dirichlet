@@ -5,9 +5,9 @@
 #ifndef REGFILL_IMAGE_HPP
 #define REGFILL_IMAGE_HPP
 
-#include "pcoord.hpp" // pcoord
-#include <iostream>   // istream, ostream
-#include <vector>     // vector
+#include "size.hpp" // coords, size
+#include <iostream> // istream, ostream
+#include <vector>   // vector
 
 namespace regfill {
 
@@ -20,13 +20,8 @@ using std::vector;
 
 /// Gray-scale image that can be initialized from a PGM-file.
 class image {
-  vector<float> pix_;      ///< Storage for pixel-values.
-  unsigned      num_cols_; ///< Number of columns in image.
-
-  /// Rectangular offsets of pixel.
-  /// \param off  Linear offset of pixel.
-  /// \return     Rectangular offsets of pixel.
-  pcoord rct(unsigned off) const;
+  vector<float> pix_;  ///< Storage for pixel-values.
+  regfill::size size_; ///< Dimensions of image.
 
   /// Draw line by stepping through columns.
   /// This function will behave properly only if `|dc| >= |dr|`.
@@ -34,7 +29,7 @@ class image {
   /// \param dc  Length of line in columns (may be negative).
   /// \param dr  Length of line in rows (may be negative).
   /// \param v   Intensity of pixels along line.
-  void draw_line_by_cols(pcoord p, float dc, float dr, float v);
+  void draw_line_by_cols(coords p, float dc, float dr, float v);
 
   /// Draw line by stepping through rows.
   /// This function will behave properly only if `|dr| >= |dc|`.
@@ -42,7 +37,7 @@ class image {
   /// \param dc  Length of line in columns (may be negative).
   /// \param dr  Length of line in rows (may be negative).
   /// \param v   Intensity of pixels along line.
-  void draw_line_by_rows(pcoord p, float dc, float dr, float v);
+  void draw_line_by_rows(coords p, float dc, float dr, float v);
 
   /// Check that `mask` has same size as this image.
   /// Throw exception if `mask` be of different size.
@@ -61,29 +56,16 @@ public:
   /// \param nr  Number of rows.
   /// \param v   Default intensity for each pixel.
   image(uint16_t nc, uint16_t nr, float v= 0.0f):
-      pix_(nc * nr, v), num_cols_(nc) {}
-
-  /// Linear offset of pixel.
-  /// \param p  Rectangular offsets of pixel.
-  /// \return   Linear offset of pixel.
-  unsigned lin(pcoord p) const;
+      pix_(nc * nr, v), size_(nc, nr) {}
 
   /// Read PGM-data from stream.
   /// \param is  Reference to input-stream.
   /// \return    Reference to input-stream.
   istream &read(istream &is);
 
-  /// Number of columns in image.  Value is simply retrieved.
-  /// \return  Number of columns in image.
-  uint16_t num_cols() const { return num_cols_; }
-
-  /// Number of rows in image.  Value is computed when num_rows() called.
-  /// \return  Number of rows in image.
-  uint16_t num_rows() const { return pix_.size() / num_cols_; }
-
-  /// Number of pixels in image.
-  /// \return  Number of pixels in image.
-  unsigned num_pix() const { return pix_.size(); }
+  /// Dimensions of image.
+  /// \return  Dimensions of image.
+  regfill::size size() const { return size_; }
 
   /// Write PGM data to stream.
   /// \param os  Reference to output-stream.
@@ -97,45 +79,45 @@ public:
   /// Reference to value of pixel.
   /// \param p  Rectangular offsets of pixel.
   /// \return   Reference to value of pixel.
-  float &pixel(pcoord p) { return pix_[lin(p)]; }
+  float &pixel(coords p) { return pix_[size_.lin(p)]; }
 
   /// Immutable reference to value of pixel.
   /// \param p  Rectangular offsets of pixel.
   /// \return   Reference to value of pixel.
-  float const &pixel(pcoord p) const { return pix_[lin(p)]; }
+  float const &pixel(coords p) const { return pix_[size_.lin(p)]; }
 
   /// Reference to value of pixel.
   /// \param p  Rectangular offsets of pixel.
   /// \return   Reference to value of pixel.
-  float &operator()(pcoord p) { return pixel(p); }
+  float &operator()(coords p) { return pixel(p); }
 
   /// Immutable reference to value of pixel.
   /// \param p  Rectangular offsets of pixel.
   /// \return   Reference to value of pixel.
-  float const &operator()(pcoord p) const { return pixel(p); }
+  float const &operator()(coords p) const { return pixel(p); }
 
   /// Draw closed polygonal perimeter.
   /// \param p  Vertices of polygon.
   /// \param v  Intensity of pixel along edges of polygon.
-  void draw_polyline(vector<pcoord> p, float v);
+  void draw_polyline(vector<coords> p, float v);
 
   /// Start from supplied coordinates, and fill outward with value v until
   /// closed border with value v is found.
   /// \param p  Rectangular offsets of starting point.
   /// \param v  Intensity with which to fill pixels.
-  void fill(pcoord p, float v);
+  void fill(coords p, float v);
 
   /// Find pixels, each with intensity greater than v (zero by default).
   /// \param v  Intensity of threshold.
   /// \return   Coordinates of every pixel with intensity greater than `v`.
-  vector<pcoord> threshold(float v= 0.0f) const;
+  vector<coords> threshold(float v= 0.0f) const;
 
   /// Find every pixel that has both
   /// (1) its value *not* above threshold intensity `v` and
   /// (2) at least one of four neighbors whose value *is* above `v`.
   /// \param v  Intensity of threshold.
   /// \return   Coordinates of every pixel along boundary of threshold-image.
-  vector<pcoord> boundary(float v= 0.0f) const;
+  vector<coords> boundary(float v= 0.0f) const;
 
   /// Use Laplace to interpolate pixels identified by nonzero pixels in mask.
   ///
@@ -177,22 +159,10 @@ inline image::image(string fn) {
 }
 
 
-inline unsigned image::lin(pcoord p) const {
-  if(p.col >= num_cols_) {
-    throw format("illegal col %u > %u", p.col, num_cols_);
-  }
-  unsigned const off= p.row * num_cols_ + p.col;
-  if(off >= pix_.size()) {
-    throw format("illegal row %u > %u", p.row, num_rows());
-  }
-  return off;
-}
-
-
 inline istream &image::read(istream &is) {
   pgm_header h(is);
-  num_cols_             = h.num_cols();
-  unsigned const num_pix= h.num_cols() * h.num_rows();
+  size_                 = h.size();
+  uint32_t const num_pix= size_.lin();
   pix_.resize(num_pix);
   bool found_max= false;
   for(unsigned i= 0; i < num_pix; ++i) {
@@ -200,14 +170,14 @@ inline istream &image::read(istream &is) {
     if(!is) {
       throw format("error reading byte %u of image (after header)", i);
     }
-    if(pix_[i] > h.max_val()) {
-      throw format("max val %f (at %d) > %d", pix_[i], i, h.max_val());
-    } else if(pix_[i] == h.max_val()) {
+    if(pix_[i] > h.max()) {
+      throw format("max val %f (at %d) > %d", pix_[i], i, h.max());
+    } else if(pix_[i] == h.max()) {
       found_max= true;
     }
   }
   if(found_max == false) {
-    throw format("max val %d > value of every pixel", h.max_val());
+    throw format("max val %d > value of every pixel", h.max());
   }
   return is;
 }
@@ -220,7 +190,7 @@ inline ostream &image::write(ostream &os) const {
     if(*i < min_val) { min_val= *i; }
   }
   enum { MAX= 255 };
-  pgm_header(num_cols_, num_rows(), MAX).write(os);
+  pgm_header(size_.cols(), size_.rows(), MAX).write(os);
   float const c= (MAX + 0.99f) / (max_val - min_val);
   for(auto i= pix_.begin(); i != pix_.end(); ++i) {
     os.put(uint8_t(c * (*i - min_val)));
@@ -236,7 +206,7 @@ inline void image::write(string fn) const {
 }
 
 
-inline void image::draw_line_by_cols(pcoord p, float dc, float dr, float v) {
+inline void image::draw_line_by_cols(coords p, float dc, float dr, float v) {
   float const m = dr / dc;
   float const c2= p.col + dc;
   float const r2= p.row + dr;
@@ -256,7 +226,7 @@ inline void image::draw_line_by_cols(pcoord p, float dc, float dr, float v) {
 }
 
 
-inline void image::draw_line_by_rows(pcoord p, float dc, float dr, float v) {
+inline void image::draw_line_by_rows(coords p, float dc, float dr, float v) {
   float const m = dc / dr;
   float const c2= p.col + dc;
   float const r2= p.row + dr;
@@ -276,7 +246,7 @@ inline void image::draw_line_by_rows(pcoord p, float dc, float dr, float v) {
 }
 
 
-inline void image::draw_polyline(vector<pcoord> p, float v) {
+inline void image::draw_polyline(vector<coords> p, float v) {
   if(p.size() == 0) { return; }
   if(p.front() != p.back()) { p.push_back(p.front()); }
   unsigned i= 0;
@@ -301,13 +271,13 @@ inline void image::draw_polyline(vector<pcoord> p, float v) {
 }
 
 
-inline void image::fill(pcoord p, float v) {
+inline void image::fill(coords p, float v) {
   if(pixel(p) == v) { return; }
   pixel(p)= v;
-  if(int(p.col) < int(num_cols_) - 1) {
+  if(int(p.col) < int(size_.cols()) - 1) {
     fill({uint16_t(p.col + 1), p.row}, v);
   }
-  if(int(p.row) < int(num_rows()) - 1) {
+  if(int(p.row) < int(size_.rows()) - 1) {
     fill({p.col, uint16_t(p.row + 1)}, v);
   }
   if(p.col > 0) { fill({uint16_t(p.col - 1), p.row}, v); }
@@ -315,37 +285,28 @@ inline void image::fill(pcoord p, float v) {
 }
 
 
-pcoord image::rct(unsigned off) const {
-  uint16_t const c= off % num_cols_;
-  uint16_t const r= off / num_cols_;
-  return {c, r};
-}
-
-
-vector<pcoord> image::threshold(float v) const {
-  vector<pcoord> s;
+vector<coords> image::threshold(float v) const {
+  vector<coords> s;
   for(auto i= pix_.cbegin(); i != pix_.end(); ++i) {
-    if(*i > v) s.push_back(rct(i - pix_.begin()));
+    if(*i > v) s.push_back(size_.rct(i - pix_.begin()));
   }
   return s;
 }
 
 
-vector<pcoord> image::boundary(float v) const {
-  vector<pcoord> b;
-  int const      nc= num_cols_;
-  int const      nr= num_rows();
+vector<coords> image::boundary(float v) const {
+  vector<coords> b;
   for(auto i= pix_.begin(); i != pix_.end(); ++i) {
     // Do nothing on current iteration if current pixel be above threshold.
     if(*i > v) continue;
     // Current pixel is *not* above threshold.  So if neighbor be above
     // threshold, then mark current pixel as on boundary.
-    pcoord const p= rct(i - pix_.begin());
+    coords const p= size_.rct(i - pix_.begin());
     int const    c= p.col;
     int const    r= p.row;
-    if(c < nc - 1 && pixel({c + 1, r}) > v) {
+    if(c < size_.cols() - 1 && pixel({c + 1, r}) > v) {
       b.push_back(p);
-    } else if(r < nr - 1 && pixel({c, r + 1}) > v) {
+    } else if(r < size_.rows() - 1 && pixel({c, r + 1}) > v) {
       b.push_back(p);
     } else if(c > 0 && pixel({c - 1, r}) > v) {
       b.push_back(p);
@@ -358,10 +319,10 @@ vector<pcoord> image::boundary(float v) const {
 
 
 void image::check_mask_size(image const &mask) {
-  uint16_t const inc= num_cols();
-  uint16_t const inr= num_rows();
-  uint16_t const mnc= mask.num_cols();
-  uint16_t const mnr= mask.num_rows();
+  uint16_t const inc= size_.cols();
+  uint16_t const inr= size_.rows();
+  uint16_t const mnc= mask.size_.cols();
+  uint16_t const mnr= mask.size_.rows();
   if(inc != mnc || inr != mnr) {
     throw format("%ux%u for image, but %ux%u for mask", inc, inr, mnc, mnr);
   }

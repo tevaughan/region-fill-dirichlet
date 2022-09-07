@@ -26,9 +26,9 @@ class cholesky_coefs {
   VectorXd                b_;
   vector<Triplet<double>> coefs_;
 
-  void f(pcoord p, unsigned i, double w) {
+  void f(coords p, unsigned i, double w) {
     auto const &map= thresh_.map();
-    auto const  it = map.find(im_.lin(p));
+    auto const  it = map.find(im_.size().lin(p));
     if(it == map.end()) {
       b_(i)+= w * im_.pixel(p);
     } else {
@@ -43,12 +43,12 @@ public:
   /// Initialize from coordinates above threshold in mask.
   cholesky_coefs(image const &im, image const &mask):
       im_(im), thresh_(mask), b_(thresh_.crd().size()) {
-    int const nc= mask.num_cols();
-    int const nr= mask.num_rows();
+    int const nc= mask.size().cols();
+    int const nr= mask.size().rows();
     for(unsigned i= 0; i < thresh_.crd().size(); ++i) {
       b_(i)= 0.0;
       coefs_.push_back({int(i), int(i), 1.0});
-      pcoord const    cc= thresh_.crd()[i];
+      coords const    cc= thresh_.crd()[i];
       neighbors const nb(nc, nr, cc);
       if(nb.fb) f({cc.col, nb.rb}, i, w_side());
       if(nb.ft) f({cc.col, nb.rt}, i, w_side());
