@@ -30,9 +30,9 @@ class cholesky_coefs {
     auto const &map= thresh_.map();
     auto const  it = map.find(im_.size().lin(p));
     if(it == map.end()) {
-      b_(i)+= w * im_.pixel(p);
+      b_(i)-= w * im_.pixel(p);
     } else {
-      coefs_.push_back({int(i), int(it->second), -w});
+      coefs_.push_back({int(i), int(it->second), w});
     }
   }
 
@@ -47,10 +47,10 @@ public:
       coefs_.push_back({int(i), int(i), 4.0});
       coords const    cc= thresh_.pix()[i].crd;
       neighbors const nb(nc, nr, cc);
-      if(nb.fb) f({cc.col, nb.rb}, i, 1.0);
-      if(nb.ft) f({cc.col, nb.rt}, i, 1.0);
-      if(nb.fr) f({nb.cr, cc.row}, i, 1.0);
-      if(nb.fl) f({nb.cl, cc.row}, i, 1.0);
+      if(nb.fb) f({cc.col, nb.rb}, i, -1.0);
+      if(nb.ft) f({cc.col, nb.rt}, i, -1.0);
+      if(nb.fr) f({nb.cr, cc.row}, i, -1.0);
+      if(nb.fl) f({nb.cl, cc.row}, i, -1.0);
     }
   }
 
