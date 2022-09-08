@@ -36,9 +36,6 @@ class cholesky_coefs {
     }
   }
 
-  constexpr static double w_side() { return 0.50 / 3.0; }
-  constexpr static double w_diag() { return 0.25 / 3.0; }
-
 public:
   /// Initialize from coordinates above threshold in mask.
   cholesky_coefs(image const &im, image const &mask):
@@ -47,21 +44,13 @@ public:
     int const nr= mask.size().rows();
     for(unsigned i= 0; i < thresh_.pix().size(); ++i) {
       b_(i)= 0.0;
-      coefs_.push_back({int(i), int(i), 1.0});
+      coefs_.push_back({int(i), int(i), 4.0});
       coords const    cc= thresh_.pix()[i].crd;
       neighbors const nb(nc, nr, cc);
-      if(nb.fb) f({cc.col, nb.rb}, i, w_side());
-      if(nb.ft) f({cc.col, nb.rt}, i, w_side());
-      if(nb.fr) {
-        f({nb.cr, cc.row}, i, w_side());
-        if(nb.fb) f({nb.cr, nb.rb}, i, w_diag());
-        if(nb.ft) f({nb.cr, nb.rt}, i, w_diag());
-      }
-      if(nb.fl) {
-        f({nb.cl, cc.row}, i, w_side());
-        if(nb.fb) f({nb.cl, nb.rb}, i, w_diag());
-        if(nb.ft) f({nb.cl, nb.rt}, i, w_diag());
-      }
+      if(nb.fb) f({cc.col, nb.rb}, i, 1.0);
+      if(nb.ft) f({cc.col, nb.rt}, i, 1.0);
+      if(nb.fr) f({nb.cr, cc.row}, i, 1.0);
+      if(nb.fl) f({nb.cl, cc.row}, i, 1.0);
     }
   }
 
