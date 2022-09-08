@@ -5,12 +5,12 @@
 #ifndef REGFILL_CHOLESKY_COEFS_HPP
 #define REGFILL_CHOLESKY_COEFS_HPP
 
-#include "eigen3/Eigen/Dense"   // VectorXd
-#include "eigen3/Eigen/Sparse"  // Triplet
-#include "image.hpp"            // image
-#include "neighbors.hpp"        // neighbors
-#include "threshold-coords.hpp" // threshold_coords
-#include <vector>               // vector
+#include "eigen3/Eigen/Dense"  // VectorXd
+#include "eigen3/Eigen/Sparse" // Triplet
+#include "image.hpp"           // image
+#include "neighbors.hpp"       // neighbors
+#include "sparse-image.hpp"    // sparse_image
+#include <vector>              // vector
 
 namespace regfill {
 
@@ -22,7 +22,7 @@ using std::vector;
 
 class cholesky_coefs {
   image const &           im_;
-  threshold_coords        thresh_;
+  sparse_image            thresh_;
   VectorXd                b_;
   vector<Triplet<double>> coefs_;
 
@@ -42,13 +42,13 @@ class cholesky_coefs {
 public:
   /// Initialize from coordinates above threshold in mask.
   cholesky_coefs(image const &im, image const &mask):
-      im_(im), thresh_(mask), b_(thresh_.crd().size()) {
+      im_(im), thresh_(mask), b_(thresh_.pix().size()) {
     int const nc= mask.size().cols();
     int const nr= mask.size().rows();
-    for(unsigned i= 0; i < thresh_.crd().size(); ++i) {
+    for(unsigned i= 0; i < thresh_.pix().size(); ++i) {
       b_(i)= 0.0;
       coefs_.push_back({int(i), int(i), 1.0});
-      coords const    cc= thresh_.crd()[i];
+      coords const    cc= thresh_.pix()[i].crd;
       neighbors const nb(nc, nr, cc);
       if(nb.fb) f({cc.col, nb.rb}, i, w_side());
       if(nb.ft) f({cc.col, nb.rt}, i, w_side());

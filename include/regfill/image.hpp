@@ -1,13 +1,14 @@
-/// \file       image.hpp
+/// \file       include/regfill/image.hpp
 /// \copyright  2018-2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Definition of regfill::image.
 
 #ifndef REGFILL_IMAGE_HPP
 #define REGFILL_IMAGE_HPP
 
-#include "size.hpp" // coords, size
-#include <iostream> // istream, ostream
-#include <vector>   // vector
+#include "basic-image.hpp"  // coords, size
+#include "sparse-pixel.hpp" // sparse_pixel
+#include <iostream>         // istream, ostream
+#include <vector>           // vector
 
 namespace regfill {
 
@@ -19,9 +20,8 @@ using std::vector;
 
 
 /// Gray-scale image that can be initialized from a PGM-file.
-class image {
-  vector<float> pix_;  ///< Storage for pixel-values.
-  regfill::size size_; ///< Dimensions of image.
+class image: public basic_image {
+  vector<float> pix_; ///< Storage for pixel-values.
 
   /// Draw line by stepping through columns.
   /// This function will behave properly only if `|dc| >= |dr|`.
@@ -45,7 +45,8 @@ class image {
   void check_mask_size(image const &mask);
 
 public:
-  image()= default; ///< By default, don't initialize anything.
+  /// By default, do not initialize.
+  image()= default;
 
   /// Initialize image from PGM file.
   /// \param fn  Name of file.
@@ -56,16 +57,12 @@ public:
   /// \param nr  Number of rows.
   /// \param v   Default intensity for each pixel.
   image(uint16_t nc, uint16_t nr, float v= 0.0f):
-      pix_(nc * nr, v), size_(nc, nr) {}
+      basic_image(nc, nr), pix_(size().lin(), v) {}
 
   /// Read PGM-data from stream.
   /// \param is  Reference to input-stream.
   /// \return    Reference to input-stream.
   istream &read(istream &is);
-
-  /// Dimensions of image.
-  /// \return  Dimensions of image.
-  regfill::size size() const { return size_; }
 
   /// Write PGM data to stream.
   /// \param os  Reference to output-stream.
@@ -79,12 +76,12 @@ public:
   /// Reference to value of pixel.
   /// \param p  Rectangular offsets of pixel.
   /// \return   Reference to value of pixel.
-  float &pixel(coords p) { return pix_[size_.lin(p)]; }
+  float &pixel(coords p) { return pix_[size().lin(p)]; }
 
   /// Immutable reference to value of pixel.
   /// \param p  Rectangular offsets of pixel.
   /// \return   Reference to value of pixel.
-  float const &pixel(coords p) const { return pix_[size_.lin(p)]; }
+  float const &pixel(coords p) const { return pix_[size().lin(p)]; }
 
   /// Reference to value of pixel.
   /// \param p  Rectangular offsets of pixel.
@@ -108,16 +105,22 @@ public:
   void fill(coords p, float v);
 
   /// Find pixels, each with intensity greater than v (zero by default).
+  ///
   /// \param v  Intensity of threshold.
-  /// \return   Coordinates of every pixel with intensity greater than `v`.
-  vector<coords> threshold(float v= 0.0f) const;
+  ///
+  /// \return   Coordinates and value of every pixel with intensity greater
+  ///           than `v`.
+  vector<sparse_pixel> threshold(float v= 0.0f) const;
 
   /// Find every pixel that has both
   /// (1) its value *not* above threshold intensity `v` and
   /// (2) at least one of four neighbors whose value *is* above `v`.
+  ///
   /// \param v  Intensity of threshold.
-  /// \return   Coordinates of every pixel along boundary of threshold-image.
-  vector<coords> boundary(float v= 0.0f) const;
+  ///
+  /// \return   Coordinates and value of every pixel along boundary of
+  ///           threshold-image.
+  vector<sparse_pixel> boundary(float v= 0.0f) const;
 
   /// Use Laplace to interpolate pixels identified by nonzero pixels in mask.
   ///
@@ -134,13 +137,13 @@ public:
 
 } // namespace regfill
 
-#include "cholesky-coefs.hpp"   // cholesky_coefs
-#include "neighbors.hpp"        // neighbors
-#include "pgm-header.hpp"       // pgm_header
-#include "threshold-coords.hpp" // threshold_coords
-#include <eigen3/Eigen/Dense>   // VectorXd
-#include <eigen3/Eigen/Sparse>  // SparseMatrix, SimplicialCholesky
-#include <fstream>              // ifstream, ofstream
+#include "cholesky-coefs.hpp"  // cholesky_coefs
+#include "neighbors.hpp"       // neighbors
+#include "pgm-header.hpp"      // pgm_header
+#include "sparse-image.hpp"    // sparse_image
+#include <eigen3/Eigen/Dense>  // VectorXd
+#include <eigen3/Eigen/Sparse> // SparseMatrix, SimplicialCholesky
+#include <fstream>             // ifstream, ofstream
 
 namespace regfill {
 
@@ -160,8 +163,9 @@ inline image::image(string fn) {
 
 
 inline istream &image::read(istream &is) {
-  pgm_header h(is);
-  size_                 = h.size();
+  pgm_header const h(is);
+  size_= h.size();
+  // Number of pixels in image.
   uint32_t const num_pix= size_.lin();
   pix_.resize(num_pix);
   bool found_max= false;
@@ -285,17 +289,17 @@ inline void image::fill(coords p, float v) {
 }
 
 
-vector<coords> image::threshold(float v) const {
-  vector<coords> s;
-  for(auto i= pix_.cbegin(); i != pix_.end(); ++i) {
-    if(*i > v) s.push_back(size_.rct(i - pix_.begin()));
+vector<sparse_pixel> image::threshold(float v) const {
+  vector<sparse_pixel> s;
+  for(auto i= pix_.begin(); i != pix_.end(); ++i) {
+    if(*i > v) s.push_back({size_.rct(i - pix_.begin()), *i});
   }
   return s;
 }
 
 
-vector<coords> image::boundary(float v) const {
-  vector<coords> b;
+vector<sparse_pixel> image::boundary(float v) const {
+  vector<sparse_pixel> b;
   for(auto i= pix_.begin(); i != pix_.end(); ++i) {
     // Do nothing on current iteration if current pixel be above threshold.
     if(*i > v) continue;
@@ -305,13 +309,13 @@ vector<coords> image::boundary(float v) const {
     int const    c= p.col;
     int const    r= p.row;
     if(c < size_.cols() - 1 && pixel({c + 1, r}) > v) {
-      b.push_back(p);
+      b.push_back({p, *i});
     } else if(r < size_.rows() - 1 && pixel({c, r + 1}) > v) {
-      b.push_back(p);
+      b.push_back({p, *i});
     } else if(c > 0 && pixel({c - 1, r}) > v) {
-      b.push_back(p);
+      b.push_back({p, *i});
     } else if(r > 0 && pixel({c, r - 1}) > v) {
-      b.push_back(p);
+      b.push_back({p, *i});
     }
   }
   return b;
@@ -333,10 +337,10 @@ void image::laplacian_fill(image const &mask) {
   check_mask_size(mask);
   // Calculate coefficients for matrix.
   cholesky_coefs coefs(*this, mask);
-  // Get list of coordinates above threshold in mask.
-  auto const &crd= coefs.thresh().crd();
-  // Get number of coordinates above threshold in mask.
-  unsigned const n= crd.size();
+  // Get list of pixels above threshold in mask.
+  auto const &pix= coefs.thresh().pix();
+  // Get number of pixels above threshold in mask.
+  unsigned const n= pix.size();
   // Set up sparse matrix.
   using mat= SparseMatrix<double>;
   mat a(n, n);
@@ -345,7 +349,7 @@ void image::laplacian_fill(image const &mask) {
   // Solve linear system.
   VectorXd const x= chol.solve(coefs.b());
   // Copy filled values into image.
-  for(unsigned i= 0; i < n; ++i) { pixel(crd[i])= x[i]; }
+  for(unsigned i= 0; i < n; ++i) { pixel(pix[i].crd)= x[i]; }
 }
 
 

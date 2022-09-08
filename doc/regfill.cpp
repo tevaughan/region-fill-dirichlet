@@ -54,22 +54,22 @@ int main() {
   trees_mod1.write("trees-mod1.pgm");
   auto const s= s_mask.threshold();
   auto const b= s_mask.boundary();
-  for(auto p: s) { t_mask(p)= 1.0; }
-  for(auto p: b) { t_mask(p)= 1.0; }
+  for(auto p: s) { t_mask(p.crd)= 1.0; }
+  for(auto p: b) { t_mask(p.crd)= 1.0; }
   s_mask.write("s_mask.pgm");
   t_mask.write("t_mask.pgm");
   image trees_mod2= trees;
   trees_mod2.laplacian_fill(t_mask);
   trees_mod2.write("trees-mod2.pgm");
   image noise(trees.size().cols(), trees.size().rows());
-  for(auto p: b) { noise(p)= fabs(trees_mod2(p) - trees_mod1(p)); }
+  for(auto p: b) noise(p.crd)= fabs(trees_mod2(p.crd) - trees_mod1(p.crd));
   noise.laplacian_fill(s_mask);
   noise.write("noise.pgm");
   image                      trees_mod3= trees;
   std::default_random_engine generator;
   for(auto p: s) {
-    std::normal_distribution<double> d(0.0, noise(p));
-    trees_mod3(p)= trees_mod1(p) + d(generator);
+    std::normal_distribution<double> d(0.0, noise(p.crd));
+    trees_mod3(p.crd)= trees_mod1(p.crd) + d(generator);
   }
   trees_mod3.write("trees-mod3.pgm");
   return 0;
