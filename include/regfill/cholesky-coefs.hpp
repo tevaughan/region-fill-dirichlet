@@ -43,10 +43,10 @@ public:
     int const nc= mask.size().cols();
     int const nr= mask.size().rows();
     for(unsigned i= 0; i < thresh_.pix().size(); ++i) {
-      b_(i)= 0.0;
-      coefs_.push_back({int(i), int(i), 4.0});
       coords const    cc= thresh_.pix()[i].crd;
       neighbors const nb(nc, nr, cc);
+      b_(i)= 0.0;
+      coefs_.push_back({int(i), int(i), 4.0});
       if(nb.fb) f({cc.col, nb.rb}, i, -1.0);
       if(nb.ft) f({cc.col, nb.rt}, i, -1.0);
       if(nb.fr) f({nb.cr, cc.row}, i, -1.0);
