@@ -32,6 +32,9 @@ class Image {
   unsigned numComps_;
 
 public:
+  /// Copy source-image, pointed to by `image`, and fill in, according to
+  /// Dirichlet-problem, pixels indicated by way of `coords`.
+  ///
   /// \tparam C         Type of each component of each pixel pointed to by
   ///                   `image`.
   ///
