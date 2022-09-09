@@ -66,12 +66,12 @@ public:
   ///
   /// \param numComps   Number of components per pixel.  By default, one.
   template<typename C>
-  Image(C        *image,
-        unsigned  numCols,
-        unsigned  numRows,
-        unsigned *coords,
-        unsigned  numCoords,
-        unsigned  numComps= 1);
+  Image(C const        *image,
+        unsigned        numCols,
+        unsigned        numRows,
+        unsigned const *coords,
+        unsigned        numCoords,
+        unsigned        numComps= 1);
 
   /// Pointer to image-data in which pixels indicated via constructor have been
   /// filled.
