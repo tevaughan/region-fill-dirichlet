@@ -1,4 +1,4 @@
-/// \file       include/dirichlet/Fill.hpp
+/// \file       include/DirichletFill.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Declaration of dirichlet::Fill.
 
@@ -38,11 +38,11 @@ public:
   ///                  (converted to `C` if necessary and) copied back into
   ///                  source-image.
   ///
-  /// \param coords    Column-row pairs, each pair holding rectangular
+  /// \param coords    Row-column pairs, each pair holding rectangular
   ///                  coordinates of pixel to be filled according to
-  ///                  Dirichlet-problem. `coords(i,0)` holds column-offset of
+  ///                  Dirichlet-problem.  `coords(i,0)` holds row-offset of
   ///                  `i`th pixel to be filled, and `coords(i,1)` holds
-  ///                  row-offset.
+  ///                  column-offset.
   ///
   /// \param image     Pointer to source-image to be analyzed.  Number of
   ///                  components per pixel must be same as `numComps`, which
@@ -54,12 +54,10 @@ public:
   ///                  `imageWidth*imageHeight*numComps`.
   ///
   /// \param width     Number of columns in source-image.  Number of elements
-  ///                  pointed to by `image` should be
-  ///                  `imageWidth*imageHeight*numComps`.
+  ///                  pointed to by `image` should be `width*height*numComps`.
   ///
   /// \param height    Number of rows in source-image.  Number of elements
-  ///                  pointed to by `image` should be
-  ///                  `imageWidth*imageHeight*numComps`.
+  ///                  pointed to by `image` should be `width*height*numComps`.
   ///
   /// \param numComps  Number of components per pixel.  By default, one.
   template<typename C>
@@ -71,19 +69,20 @@ public:
 
   /// Solution to linear system.
   ///
-  /// Each column in solution corresponds to one color-component of pixel, and
-  /// order of columns in solution is same as order of components within pixel
+  /// Each column in solution corresponds to one color-component of pixel.
+  /// Order of columns in solution is same as order of components within pixel
   /// of `image` as specified in call to constructor.  If image be gray, then
   /// solution has only one column.
   ///
-  /// Each row in solution specifies coordinates of filled pixel, and order of
-  /// rows in solution is same as order of rows in `coords` as specified in
-  /// call to constructor.
+  /// Each row in solution specifies coordinates of filled pixel. Order of rows
+  /// in solution is same as order of rows in `coords` as specified in call to
+  /// constructor.
   ///
-  /// What is stored in each element of solution is value of component
-  /// satisfying zero value for Laplacian across pixels to be filled.
-  /// Component of pixel corresponds to column in solution, and coordinates of
-  /// pixel correspond to row in solution.
+  /// What is stored in each element of solution is value of pixel's component
+  /// satisfying zero value for Laplacian of component at location of
+  /// component.  Each column in solution corresponds to different component of
+  /// pixel, and each row in solution corresponds to different location on
+  /// pixel-grid.
   ///
   /// If template-parameter `C`, as specified in constructor, be non-const
   /// type, then solution is not just stored in instance but also (converted to
@@ -93,6 +92,42 @@ public:
   /// \return  Solution to linear system.
   ArrayXf const &x() const { return x_; }
 };
+
+
+} // namespace dirichlet
+
+#include <iostream> // cout, cerr, endl
+
+namespace dirichlet {
+
+
+using Eigen::ArrayXi;
+using std::cerr;
+using std::endl;
+
+
+template<typename C>
+Fill::Fill(
+      ArrayX2i const &coords,
+      C              *image,
+      unsigned        width,
+      unsigned        height,
+      unsigned        numComps) {
+  ArrayXi map(height, width);
+  for(unsigned r= 0; r < coords.rows(); ++r) {
+    int const row= coords(r, 0);
+    int const col= coords(r, 1);
+    if(col < 0 || col >= width) {
+      cerr << "Fill::Fill: col=" << col << " out of bounds" << endl;
+      continue;
+    }
+    if(row < 0 || row >= height) {
+      cerr << "Fill::Fill: row=" << row << " out of bounds" << endl;
+      continue;
+    }
+    // TBS
+  }
+}
 
 
 } // namespace dirichlet
