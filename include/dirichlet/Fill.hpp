@@ -5,61 +5,86 @@
 #ifndef DIRICHLET_FILL_HPP
 #define DIRICHLET_FILL_HPP
 
-#include <eigen3/Eigen/Dense> // ArrayX2i, ArrayXf
+#include <eigen3/Eigen/Dense> // ArrayX2i, ArrayXf, ArrayXi
 
 /// Namespace for code solving Dirichlet-problem for zero-valued Laplacian
 /// across specified pixels in image.
 namespace dirichlet {
 
 
-using Eigen::ArrayX2i;
-using Eigen::ArrayXf;
+using Eigen::ArrayX2i; // For list of coordinates.
+using Eigen::ArrayXf;  // For solution.
+using Eigen::ArrayXXi; // For coordinates-map.
 
 
-/// Solve Dirichlet-problem for zero-valued Laplacian across specified pixels
-/// in image.
+/// Solution to Dirichlet-problem for zero-valued Laplacian across specified
+/// pixels in image.
 class Fill {
-  ArrayXf x_; ///< Solution to linear system.  See documentation for x().
+  /// Solution to linear system.  See documentation for x().
+  ArrayXf x_;
+
+  /// Map from rectangular coordinates of pixel in solution to offset in array
+  /// returned by x().  See documentation for coordsMap().
+  ArrayXXi coordsMap_;
+
+  /// Function called by constructor to initialize value returned by
+  /// coordsMap().
+  ///
+  /// \param coords  Row-column pairs, each pair holding rectangular
+  ///                coordinates of pixel to be filled according to
+  ///                Dirichlet-problem.  `coords(i,0)` holds image-row-offset
+  ///                of `i`th pixel to be filled, and `coords(i,1)` holds
+  ///                image-column-offset.
+  ///
+  /// \param width   Number of columns in image.
+  /// \param height  Number of rows    in image.
+  ///
+  /// \return        Initializer for array returned by coordsMap().
+  ///
+  static ArrayXXi
+  initCoords(ArrayX2i const coords, unsigned width, unsigned height);
 
 public:
-  /// Analyze source-image, pointed to by `image`, and calculate for each
-  /// pixel, whose location is specified in `coords`, value with which pixel
-  /// should be filled in, according to Dirichlet-problem.
+  /// Analyze image, and, for each pixel whose location is specified in
+  /// `coords`, calculate value with which pixel should be filled, according to
+  /// Dirichlet-problem for `coords`.
   ///
-  /// If pixel to be filled lie on edge of source-image, then only component of
-  /// Laplacian parallel to edge is set to zero in constraining pixel's value.
-  /// Component of Laplacian perpendicular to edge is ignored.
+  /// If pixel specified in `coords` lie on edge of image, then only component
+  /// of Laplacian parallel to edge is set to zero in constraining pixel's
+  /// value.  Component of Laplacian perpendicular to edge is ignored if pixel
+  /// be on edge of image.
   ///
-  /// If pixel to be filled lie at corner of source-image, then zero is used as
-  /// boundary-value at corner.
+  /// Every pixel specified in `coords` must lie in image and *not* at corner
+  /// of image.  Otherwise, behavior is undefined.
   ///
   /// \tparam C        Type of each component of each pixel pointed to by
   ///                  `image`.  If `C` be non-const type, then solution is
   ///                  (converted to `C` if necessary and) copied back into
-  ///                  source-image.
+  ///                  image.
   ///
   /// \param coords    Row-column pairs, each pair holding rectangular
   ///                  coordinates of pixel to be filled according to
-  ///                  Dirichlet-problem.  `coords(i,0)` holds row-offset of
-  ///                  `i`th pixel to be filled, and `coords(i,1)` holds
-  ///                  column-offset.
+  ///                  Dirichlet-problem.  `coords(i,0)` holds image-row-offset
+  ///                  of `i`th pixel to be filled, and `coords(i,1)` holds
+  ///                  image-column-offset.
   ///
-  /// \param image     Pointer to source-image to be analyzed.  Number of
-  ///                  components per pixel must be same as `numComps`, which
-  ///                  is one by default. Pixels should be arranged in memory
-  ///                  so that, except at end of row, columns advance for
-  ///                  subsequent elements while row stays constant (row-major
-  ///                  order).  Components within pixel advance fastest of all.
-  ///                  Number of elements pointed to by `image` should be
-  ///                  `imageWidth*imageHeight*numComps`.
+  /// \param image     Pointer to image to be analyzed.  Number of components
+  ///                  per pixel must be same as `numComps`, which is one by
+  ///                  default.  Pixels should be arranged in memory so that,
+  ///                  except at end of row, columns advance for subsequent
+  ///                  elements while row stays constant (row-major order).
+  ///                  Components within pixel advance fastest of all.  Number
+  ///                  of elements pointed to by `image` should be
+  ///                  `width*height*numComps`.
   ///
-  /// \param width     Number of columns in source-image.  Number of elements
-  ///                  pointed to by `image` should be `width*height*numComps`.
+  /// \param width     Number of columns in image.  Number of elements pointed
+  ///                  to by `image` should be `width*height*numComps`.
   ///
-  /// \param height    Number of rows in source-image.  Number of elements
-  ///                  pointed to by `image` should be `width*height*numComps`.
+  /// \param height    Number of rows in image.  Number of elements pointed to
+  ///                  by `image` should be `width*height*numComps`.
   ///
   /// \param numComps  Number of components per pixel.  By default, one.
+  ///
   template<typename C>
   Fill(ArrayX2i const &coords,
        C              *image,
@@ -74,36 +99,63 @@ public:
   /// of `image` as specified in call to constructor.  If image be gray, then
   /// solution has only one column.
   ///
-  /// Each row in solution specifies coordinates of filled pixel. Order of rows
-  /// in solution is same as order of rows in `coords` as specified in call to
+  /// Each row in solution corresponds to different pixel.  Order of rows in
+  /// solution is same as order of rows in `coords` as specified in call to
   /// constructor.
   ///
   /// What is stored in each element of solution is value of pixel's component
   /// satisfying zero value for Laplacian of component at location of
   /// component.  Each column in solution corresponds to different component of
-  /// pixel, and each row in solution corresponds to different location on
-  /// pixel-grid.
+  /// pixel, and each row in solution corresponds to different pixel.
   ///
   /// If template-parameter `C`, as specified in constructor, be non-const
   /// type, then solution is not just stored in instance but also (converted to
-  /// `C` if necessary and) copied back into source-image specified in
-  /// constructor.
+  /// `C` if necessary and) copied back into image specified in constructor.
   ///
   /// \return  Solution to linear system.
+  ///
   ArrayXf const &x() const { return x_; }
+
+  /// Map from rectangular coordinates of pixel in solution to offset of row in
+  /// matrix returned by x().
+  ///
+  /// Returned matrix has `height` rows and `width` columns.  Each element has
+  /// value -1 except at coordinates in solution.  If coordinates be in
+  /// solution, then element contains offset, both of corresponding row in
+  /// matrix returned by x() and of corresponding row in matrix `coords` as
+  /// specified in call to constructor.
+  ///
+  /// \return  Map from rectangular coordinates of pixel in solution to offset
+  ///          of row in matrix returned by x().
+  ///
+  ArrayXXi const &coordsMap() const { return coordsMap_; }
 };
 
 
 } // namespace dirichlet
 
-#include <iostream> // cout, cerr, endl
+// Implementation below.
 
 namespace dirichlet {
 
 
-using Eigen::ArrayXi;
-using std::cerr;
-using std::endl;
+using Eigen::Array;
+using Eigen::Dynamic;
+using Eigen::Map;
+using Eigen::seqN;
+
+
+using ColArrayXi= Array<int, Dynamic, 1>;
+
+
+inline ArrayXXi
+Fill::initCoords(ArrayX2i const coords, unsigned width, unsigned height) {
+  ArrayXXi         cmap(ArrayXXi::Constant(height, width, -1));
+  ColArrayXi const lin= coords.col(0) + coords.col(1) * height;
+  Map<ColArrayXi>  m(&cmap(0, 0), height * width, 1);
+  m(lin)= ColArrayXi::LinSpaced(coords.rows(), 0, coords.rows() - 1);
+  return cmap;
+}
 
 
 template<typename C>
@@ -112,21 +164,9 @@ Fill::Fill(
       C              *image,
       unsigned        width,
       unsigned        height,
-      unsigned        numComps) {
-  ArrayXi map(height, width);
-  for(unsigned r= 0; r < coords.rows(); ++r) {
-    int const row= coords(r, 0);
-    int const col= coords(r, 1);
-    if(col < 0 || col >= width) {
-      cerr << "Fill::Fill: col=" << col << " out of bounds" << endl;
-      continue;
-    }
-    if(row < 0 || row >= height) {
-      cerr << "Fill::Fill: row=" << row << " out of bounds" << endl;
-      continue;
-    }
-    // TBS
-  }
+      unsigned        numComps):
+    coordsMap_(initCoords(coords, width, height)) {
+  // TBS
 }
 
 
