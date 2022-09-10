@@ -5,20 +5,19 @@ under namespace `regfill`, improved design and
 implementation is under namespace `dfill`.
 
 Design under dfill internally uses Eigen more
-throughly, solves the problem separately for
-each disjoint region, and does not use
-`std::map`.
+throughly, minimizes copying, solves the problem
+separately for each disjoint region, and does
+not use `std::map`.
 
-The basic idea is to have a pointer-based
-interface.  Constructor for
-[`dfill::Image`](Image.hpp) will produce copy of
-original image but with indicated region(s)
-filled.
-
-Constructor takes
-- pointer to initial image,
-- dimensions of image,
-- 1-d array of coordinates for pixels to be filled.
+The basic idea is to employ an interface
+enabling speed and flexibility.  Constructor for
+[`dfill::Image`](Image.hpp) will do very little
+copying: It will copy the solution into the
+original image only if that image be passed to
+constructor by way of non-const pointer.
+Otherwise, the solution, only for the specified
+pixels, may be read from the instance after
+construction.
 
 Internal allocations include:
 - 2-d array of int32_t with same size as image.
