@@ -5,94 +5,98 @@
 #ifndef DFILL_IMAGE_HPP
 #define DFILL_IMAGE_HPP
 
-#include <memory> // unique_ptr
+#include <eigen3/Eigen/Dense> // ArrayX2i, ArrayXf
 
+/// Namespace for code implementing Dirichlet-filling of certain pixels
+/// specified in image.
 namespace dfill {
 
 
-using std::unique_ptr;
+using Eigen::ArrayX2i;
+using Eigen::ArrayXf;
 
 
 /// Solve Dirichlet-problem for specified pixels in image.
-///
-/// Solution is image with pixel-component of type `float`, regardless of type
-/// of pixel-component in source-image.
 class Image {
-  /// Pointer to image-data in which pixels indicated via constructor have been
-  /// filled.
-  unique_ptr<float> image_;
-
-  /// Number of columns in image.
-  unsigned numCols_;
-
-  /// Number of rows in image.
-  unsigned numRows_;
-
-  /// Number of components per pixel.
-  unsigned numComps_;
+  /// Solution to linear system.
+  ///
+  /// Each column in solution specifies component of filled pixel, and order of
+  /// columns in solution is same as order of components within pixel of
+  /// `image` as specified in call to constructor.
+  ///
+  /// Each row in solution specifies coordinates of filled pixel, and order of
+  /// rows in solution is same as order of rows in `coords` as specified in
+  /// call to constructor.
+  ///
+  /// Stored in element of solution is filled value of component corresponding
+  /// to column and at coordinates corresponding to row.
+  ///
+  /// If template-parameter `C` specified in constructor be non-const type,
+  /// then solution is not just stored in `x_` but also (converted to `C` if
+  /// necessary and) copied back into source-image specified in constructor.
+  ArrayXf x_;
 
 public:
-  /// Copy source-image, pointed to by `image`, and fill in, according to
-  /// Dirichlet-problem, pixels indicated by way of `coords`.
+  /// Analyze source-image, pointed to by `image`, and calculate for each
+  /// pixel, whose location is specified in `coords`, value with which pixel
+  /// should be filled in, according to Dirichlet-problem.
   ///
-  /// \tparam C         Type of each component of each pixel pointed to by
-  ///                   `image`.
+  /// \tparam C           Type of each component of each pixel pointed to by
+  ///                     `image`.  If `C` be non-const type, then solution is
+  ///                     (converted to `C` if necessary and) copied back into
+  ///                     source-image.
   ///
-  /// \param image      Pointer to image-data to be analyzed.  Number of
-  ///                   components per pixel must be same as `numComps`, which
-  ///                   is one by default.  Pixels should be arranged in memory
-  ///                   so that, except at end of row, columns advance while
-  ///                   row stays constant (row-major order). Components within
-  ///                   pixel advance fastest of all.  Number of elements
-  ///                   pointed to by `image` should be
-  ///                   `numCols*numRows*numComps`.
+  /// \param coords       Column-row pairs, each pair holding rectangular
+  ///                     coordinates of pixel to be filled according to
+  ///                     Dirichlet-problem.  `coords(i,0)` holds column-offset
+  ///                     of `i`th pixel to be filled, and `coords(i,1)` holds
+  ///                     row-offset.
   ///
-  /// \param numCols    Number of columns in image.  Number of elements pointed
-  ///                   to by `image` should be `numCols*numRows*numComps`.
+  /// \param image        Pointer to source-image to be analyzed.  Number of
+  ///                     components per pixel must be same as `numComps`,
+  ///                     which is one by default.  Pixels should be arranged
+  ///                     in memory so that, except at end of row, columns
+  ///                     advance for subsequent elements while row stays
+  ///                     constant (row-major order).  Components within pixel
+  ///                     advance fastest of all.  Number of elements pointed
+  ///                     to by `image` should be
+  ///                     `imageWidth*imageHeight*numComps`.
   ///
-  /// \param numCols    Number of rows in image.  Number of elements pointed to
-  ///                   by `image` should be `numCols*numRows*numComps`.
+  /// \param imageWidth   Number of columns in source-image.  Number of
+  ///                     elements pointed to by `image` should be
+  ///                     `imageWidth*imageHeight*numComps`.
   ///
-  /// \param coords     Pointer to column-row pairs, each pair identifying
-  ///                   pixel to be filled according to Dirichlet-problem.  In
-  ///                   each pair of `unsigned` elements, column is first, and
-  ///                   row is second.  Number of elements pointed to by
-  ///                   `coords` should be `numCoords*2`.
+  /// \param imageHeight  Number of rows in source-image.  Number of elements
+  ///                     pointed to by `image` should be
+  ///                     `imageWidth*imageHeight*numComps`.
   ///
-  /// \param numCoords  Number of column-row pairs, each identifying pixel to
-  ///                   be filled according to Dirichlet-problem.  Number of
-  ///                   elements pointed to by `coords` should be
-  ///                   `numCoords*2`.
-  ///
-  /// \param numComps   Number of components per pixel.  By default, one.
+  /// \param numComps     Number of components per pixel.  By default, one.
   template<typename C>
-  Image(C const        *image,
-        unsigned        numCols,
-        unsigned        numRows,
-        unsigned const *coords,
-        unsigned        numCoords,
+  Image(ArrayX2i const &coords,
+        C              *image,
+        unsigned        imageWidth,
+        unsigned        imageHeight,
         unsigned        numComps= 1);
 
-  /// Pointer to image-data in which pixels indicated via constructor have been
-  /// filled.
+  /// Solution to linear system.
   ///
-  /// Number of components per pixel is same as returned by `numComps()`.
-  /// Pixels are arranged in memory so that, except at end of row, columns
-  /// advance while row stays constant (row-major order).  Components within
-  /// pixel advance fastest of all.  Number of elements pointed to by `image`
-  /// is `numCols()*numRows()*numComps()`.
+  /// Each column in solution specifies component of filled pixel, and order of
+  /// columns in solution is same as order of components within pixel of
+  /// `image` as specified in call to constructor.
   ///
-  /// \return  Pointer to image-data.
-  float const *image() const { return image_.get(); }
-
-  /// Number of columns in image.
-  unsigned numCols() const { return numCols_; }
-
-  /// Number of rows in image.
-  unsigned numRows() const { return numRows_; }
-
-  /// Number of components per pixel.
-  unsigned numComps() const { return numComps_; }
+  /// Each row in solution specifies coordinates of filled pixel, and order of
+  /// rows in solution is same as order of rows in `coords` as specified in
+  /// call to constructor.
+  ///
+  /// Stored in element of solution is filled value of component corresponding
+  /// to column and at coordinates corresponding to row.
+  ///
+  /// If template-parameter `C` specified in constructor be non-const type,
+  /// then solution is not just stored in `x_` but also (converted to `C` if
+  /// necessary and) copied back into source-image specified in constructor.
+  ///
+  /// \return  Solution to linear system.
+  ArrayXf const &x() const { return x_; }
 };
 
 
