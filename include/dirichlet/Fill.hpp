@@ -5,7 +5,7 @@
 #ifndef DIRICHLET_FILL_HPP
 #define DIRICHLET_FILL_HPP
 
-#include <eigen3/Eigen/Dense> // ArrayX2i, ArrayXf, ArrayXi
+#include <eigen3/Eigen/Dense> // ArrayX2i, ArrayXf, ArrayXXi, ArrayXi, Map
 
 /// Namespace for code solving Dirichlet-problem for zero-valued Laplacian
 /// across specified pixels in image.
@@ -139,21 +139,16 @@ public:
 namespace dirichlet {
 
 
-using Eigen::Array;
-using Eigen::Dynamic;
+using Eigen::ArrayXi;
 using Eigen::Map;
-using Eigen::seqN;
-
-
-using ColArrayXi= Array<int, Dynamic, 1>;
 
 
 inline ArrayXXi
 Fill::initCoords(ArrayX2i const coords, unsigned width, unsigned height) {
-  ArrayXXi         cmap(ArrayXXi::Constant(height, width, -1));
-  ColArrayXi const lin= coords.col(0) + coords.col(1) * height;
-  Map<ColArrayXi>  m(&cmap(0, 0), height * width, 1);
-  m(lin)= ColArrayXi::LinSpaced(coords.rows(), 0, coords.rows() - 1);
+  ArrayXXi      cmap(ArrayXXi::Constant(height, width, -1));
+  ArrayXi const lin= coords.col(0) + coords.col(1) * height;
+  Map<ArrayXi>  m(&cmap(0, 0), height * width, 1);
+  m(lin)= ArrayXi::LinSpaced(coords.rows(), 0, coords.rows() - 1);
   return cmap;
 }
 
