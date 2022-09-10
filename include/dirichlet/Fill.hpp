@@ -1,4 +1,4 @@
-/// \file       include/DirichletFill.hpp
+/// \file       include/dirichlet/Fill.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Declaration of dirichlet::Fill.
 
@@ -12,9 +12,16 @@
 namespace dirichlet {
 
 
-using Eigen::ArrayX2i; // For list of coordinates.
 using Eigen::ArrayXf;  // For solution.
 using Eigen::ArrayXXi; // For coordinates-map.
+
+
+/// Type used for passing row-column pairs, each pair holding rectangular
+/// coordinates of pixel to be filled according to Dirichlet-problem.  For
+/// instance `coords` of type `Coords`,
+/// - `coords(i,0)` holds image-row of `i`th pixel to be filled, and
+/// - `coords(i,1)` holds image-col of `i`th pixel to be filled.
+using Coords= Eigen::ArrayX2i;
 
 
 /// Solution to Dirichlet-problem for zero-valued Laplacian across specified
@@ -31,38 +38,26 @@ class Fill {
   ///
   /// Return false if any coordinates be out of bounds or in corner of image.
   ///
-  /// \param coords  Row-column pairs, each pair holding rectangular
-  ///                coordinates of pixel to be filled according to
-  ///                Dirichlet-problem.  `coords(i,0)` holds image-row-offset
-  ///                of `i`th pixel to be filled, and `coords(i,1)` holds
-  ///                image-column-offset.
-  ///
+  /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
   /// \param height  Number of rows    in image.
-  ///
   /// \return        True only if coordinates support well defined solution.
   ///
   static bool
-  coordsGood(ArrayX2i const &coords, unsigned width, unsigned height);
+  coordsGood(Coords const &coords, unsigned width, unsigned height);
 
   /// Compute initializer for value returned by coordsMap().
   ///
   /// Empty matrix is returned if any coordinates be out of bounds or in corner
   /// of image.
   ///
-  /// \param coords  Row-column pairs, each pair holding rectangular
-  ///                coordinates of pixel to be filled according to
-  ///                Dirichlet-problem.  `coords(i,0)` holds image-row-offset
-  ///                of `i`th pixel to be filled, and `coords(i,1)` holds
-  ///                image-column-offset.
-  ///
+  /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
   /// \param height  Number of rows    in image.
-  ///
   /// \return        Initializer for array returned by coordsMap().
   ///
   static ArrayXXi
-  initCoords(ArrayX2i const &coords, unsigned width, unsigned height);
+  initCoords(Coords const &coords, unsigned width, unsigned height);
 
 public:
   /// Analyze image, and, for each pixel whose location is specified in
@@ -82,11 +77,7 @@ public:
   ///                  (converted to `C` if necessary and) copied back into
   ///                  image.
   ///
-  /// \param coords    Row-column pairs, each pair holding rectangular
-  ///                  coordinates of pixel to be filled according to
-  ///                  Dirichlet-problem.  `coords(i,0)` holds image-row-offset
-  ///                  of `i`th pixel to be filled, and `coords(i,1)` holds
-  ///                  image-column-offset.
+  /// \param coords    Coordinates of each pixel to be Dirichlet-filled.
   ///
   /// \param image     Pointer to image to be analyzed.  Number of components
   ///                  per pixel must be same as `numComps`, which is one by
@@ -106,11 +97,11 @@ public:
   /// \param numComps  Number of components per pixel.  By default, one.
   ///
   template<typename C>
-  Fill(ArrayX2i const &coords,
-       C              *image,
-       unsigned        width,
-       unsigned        height,
-       unsigned        numComps= 1);
+  Fill(Coords const &coords,
+       C            *image,
+       unsigned      width,
+       unsigned      height,
+       unsigned      numComps= 1);
 
   /// Solution to linear system.
   ///
@@ -174,7 +165,7 @@ using std::endl;
 
 
 inline bool
-Fill::coordsGood(ArrayX2i const &coords, unsigned width, unsigned height) {
+Fill::coordsGood(Coords const &coords, unsigned width, unsigned height) {
   auto roob= (coords.col(0) < 0) || (coords.col(0) >= height);
   auto coob= (coords.col(1) < 0) || (coords.col(1) >= width);
   auto rlo = (coords.col(0) == 0);
@@ -200,7 +191,7 @@ Fill::coordsGood(ArrayX2i const &coords, unsigned width, unsigned height) {
 
 
 inline ArrayXXi
-Fill::initCoords(ArrayX2i const &coords, unsigned width, unsigned height) {
+Fill::initCoords(Coords const &coords, unsigned width, unsigned height) {
   if(!coordsGood(coords, width, height)) return ArrayXXi();
   ArrayXXi      cmap(ArrayXXi::Constant(height, width, -1));
   ArrayXi const lin= coords.col(0) + coords.col(1) * height;
@@ -212,11 +203,11 @@ Fill::initCoords(ArrayX2i const &coords, unsigned width, unsigned height) {
 
 template<typename C>
 Fill::Fill(
-      ArrayX2i const &coords,
-      C              *image,
-      unsigned        width,
-      unsigned        height,
-      unsigned        numComps):
+      Coords const &coords,
+      C            *image,
+      unsigned      width,
+      unsigned      height,
+      unsigned      numComps):
     coordsMap_(initCoords(coords, width, height)) {
   if(coordsMap_.rows() == 0) return;
   // TBS
