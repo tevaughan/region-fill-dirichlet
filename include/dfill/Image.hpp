@@ -1,6 +1,6 @@
 /// \file       include/dfill/Image.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
-/// \brief      Definition of dfill::Image.
+/// \brief      Declaration of dfill::Image.
 
 #ifndef DFILL_IMAGE_HPP
 #define DFILL_IMAGE_HPP
