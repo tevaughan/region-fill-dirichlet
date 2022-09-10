@@ -27,8 +27,25 @@ class Fill {
   /// returned by x().  See documentation for coordsMap().
   ArrayXXi coordsMap_;
 
-  /// Function called by constructor to initialize value returned by
-  /// coordsMap().
+  /// Verify that coordinates support well defined solution.
+  ///
+  /// Return false if any coordinates be out of bounds or in corner of image.
+  ///
+  /// \param coords  Row-column pairs, each pair holding rectangular
+  ///                coordinates of pixel to be filled according to
+  ///                Dirichlet-problem.  `coords(i,0)` holds image-row-offset
+  ///                of `i`th pixel to be filled, and `coords(i,1)` holds
+  ///                image-column-offset.
+  ///
+  /// \param width   Number of columns in image.
+  /// \param height  Number of rows    in image.
+  ///
+  /// \return        True only if coordinates support well defined solution.
+  ///
+  static bool
+  coordsGood(ArrayX2i const &coords, unsigned width, unsigned height);
+
+  /// Compute initializer for value returned by coordsMap().
   ///
   /// Empty matrix is returned if any coordinates be out of bounds or in corner
   /// of image.
@@ -45,7 +62,7 @@ class Fill {
   /// \return        Initializer for array returned by coordsMap().
   ///
   static ArrayXXi
-  initCoords(ArrayX2i const coords, unsigned width, unsigned height);
+  initCoords(ArrayX2i const &coords, unsigned width, unsigned height);
 
 public:
   /// Analyze image, and, for each pixel whose location is specified in
@@ -58,7 +75,7 @@ public:
   /// be on edge of image.
   ///
   /// Every pixel specified in `coords` must lie in image and *not* at corner
-  /// of image.  Otherwise, behavior is undefined.
+  /// of image.  Otherwise, no solution is computed.
   ///
   /// \tparam C        Type of each component of each pixel pointed to by
   ///                  `image`.  If `C` be non-const type, then solution is
@@ -131,6 +148,9 @@ public:
   /// matrix returned by x() and of corresponding row in matrix `coords` as
   /// specified in call to constructor.
   ///
+  /// Array is empty if any specified coordinates be out of bounds or in corder
+  /// of image.
+  ///
   /// \return  Map from rectangular coordinates of pixel in solution to offset
   ///          of row in matrix returned by x().
   ///
@@ -153,8 +173,8 @@ using std::cerr;
 using std::endl;
 
 
-inline ArrayXXi
-Fill::initCoords(ArrayX2i const coords, unsigned width, unsigned height) {
+inline bool
+Fill::coordsGood(ArrayX2i const &coords, unsigned width, unsigned height) {
   auto roob= (coords.col(0) < 0) || (coords.col(0) >= height);
   auto coob= (coords.col(1) < 0) || (coords.col(1) >= width);
   auto rlo = (coords.col(0) == 0);
@@ -163,15 +183,25 @@ Fill::initCoords(ArrayX2i const coords, unsigned width, unsigned height) {
   auto chi = (coords.col(1) == width - 1);
   auto crnr= (rlo && clo) || (rlo && chi) || (rhi && clo) || (rhi && chi);
   if((roob || coob || crnr).cast<int>().sum() > 0) {
-    cerr << "Fill::initCoords: WARNING: out of bounds or corner\n"
-         << "roob:\n"
-         << roob << "\n"
-         << "coob:\n"
-         << coob << "\n"
-         << "crnr:\n"
-         << crnr << endl;
-    return ArrayXXi();
+    char const w[]= "Fill::coordsGood: WARNING: ";
+    for(int i= 0; i < roob.size(); ++i) {
+      int const r= coords(i, 0), c= coords(i, 1);
+      if(roob[i]) cerr << w << "r(" << i << ")=" << r << " OOB" << endl;
+      if(coob[i]) cerr << w << "c(" << i << ")=" << c << " OOB" << endl;
+      if(crnr[i]) {
+        cerr << w << "off=" << i << ": (" << r << "," << c << ") at corner"
+             << endl;
+      }
+    }
+    return false;
   }
+  return true;
+}
+
+
+inline ArrayXXi
+Fill::initCoords(ArrayX2i const &coords, unsigned width, unsigned height) {
+  if(!coordsGood(coords, width, height)) return ArrayXXi();
   ArrayXXi      cmap(ArrayXXi::Constant(height, width, -1));
   ArrayXi const lin= coords.col(0) + coords.col(1) * height;
   Map<ArrayXi>  m(&cmap(0, 0), height * width, 1);
@@ -188,6 +218,7 @@ Fill::Fill(
       unsigned        height,
       unsigned        numComps):
     coordsMap_(initCoords(coords, width, height)) {
+  if(coordsMap_.rows() == 0) return;
   // TBS
 }
 
