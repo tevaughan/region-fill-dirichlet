@@ -1,15 +1,15 @@
-/// \file       include/dfill/Image.hpp
+/// \file       include/dirichlet/Fill.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
-/// \brief      Declaration of dfill::Image.
+/// \brief      Declaration of dirichlet::Fill.
 
-#ifndef DFILL_IMAGE_HPP
-#define DFILL_IMAGE_HPP
+#ifndef DIRICHLET_FILL_HPP
+#define DIRICHLET_FILL_HPP
 
 #include <eigen3/Eigen/Dense> // ArrayX2i, ArrayXf
 
 /// Namespace for code implementing Dirichlet-filling of certain pixels
 /// specified in image.
-namespace dfill {
+namespace dirichlet {
 
 
 using Eigen::ArrayX2i;
@@ -17,7 +17,7 @@ using Eigen::ArrayXf;
 
 
 /// Solve Dirichlet-problem for specified pixels in image.
-class Image {
+class Fill {
   /// Solution to linear system.
   ///
   /// Each column in solution specifies component of filled pixel, and order of
@@ -72,11 +72,11 @@ public:
   ///
   /// \param numComps     Number of components per pixel.  By default, one.
   template<typename C>
-  Image(ArrayX2i const &coords,
-        C              *image,
-        unsigned        imageWidth,
-        unsigned        imageHeight,
-        unsigned        numComps= 1);
+  Fill(ArrayX2i const &coords,
+       C              *image,
+       unsigned        imageWidth,
+       unsigned        imageHeight,
+       unsigned        numComps= 1);
 
   /// Solution to linear system.
   ///
@@ -100,8 +100,8 @@ public:
 };
 
 
-} // namespace dfill
+} // namespace dirichlet
 
-#endif // ndef DFILL_IMAGE_HPP
+#endif // ndef DIRICHLET_FILL_HPP
 
 // EOF

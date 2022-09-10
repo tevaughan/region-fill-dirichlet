@@ -1,20 +1,20 @@
-# Redesign Under Namespace `dfill`
+# Redesign Under Namespace `dirichlet`
 
 After initial design and implementation as code
 under namespace `regfill`, improved design and
-implementation is under namespace `dfill`.
+implementation is under namespace `dirichlet`.
 
-Design under dfill internally uses Eigen more
-throughly, minimizes copying, solves the problem
-separately for each disjoint region, and does
-not use `std::map`.
+Design under `dirichlet` internally uses Eigen
+more throughly, minimizes copying, solves the
+problem separately for each disjoint region, and
+does not use `std::map`.
 
 The basic idea is to employ an interface
 enabling speed and flexibility.  Constructor for
-[`dfill::Image`](Image.hpp) will do very little
-copying: It will copy the solution into the
-original image only if that image be passed to
-constructor by way of non-const pointer.
+[`dirichlet::Fill`](Fill.hpp) will do very
+little copying: It will copy the solution into
+the original image only if that image be passed
+to constructor by way of non-const pointer.
 Otherwise, the solution, only for the specified
 pixels, may be read from the instance after
 construction.
