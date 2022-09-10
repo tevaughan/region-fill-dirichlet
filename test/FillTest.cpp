@@ -3,7 +3,7 @@
 /// \brief      Tests for dirichlet::Fill.
 
 #include "dirichlet/Fill.hpp" // Fill
-#include <catch.hpp>          // TEST_CASE
+#include <catch2/catch.hpp>   // TEST_CASE
 #include <iostream>           // cout, endl
 
 
@@ -34,6 +34,56 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
   REQUIRE(f.coordsMap()(0, 2) == -1);
   REQUIRE(f.coordsMap()(1, 2) == -1);
   REQUIRE(f.coordsMap()(2, 0) == -1);
+}
+
+
+TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
+  ArrayX2i coords(2, 2);
+  coords.row(0)= Array2i(1, 1); // pixel at        center of 3x3
+  coords.row(1)= Array2i(3, 1); // pixel oob below center of 3x3
+  Fill const f(coords, image1, width1, height1);
+  REQUIRE(f.coordsMap().rows() == 0);
+  REQUIRE(f.coordsMap().cols() == 0);
+}
+
+
+TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
+  ArrayX2i coords(2, 2);
+  coords.row(0)= Array2i(1, 1);  // pixel at        center of 3x3
+  coords.row(1)= Array2i(-1, 1); // pixel oob above center of 3x3
+  Fill const f(coords, image1, width1, height1);
+  REQUIRE(f.coordsMap().rows() == 0);
+  REQUIRE(f.coordsMap().cols() == 0);
+}
+
+
+TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
+  ArrayX2i coords(2, 2);
+  coords.row(0)= Array2i(1, 1); // pixel at           center of 3x3
+  coords.row(1)= Array2i(1, 3); // pixel oob right of center of 3x3
+  Fill const f(coords, image1, width1, height1);
+  REQUIRE(f.coordsMap().rows() == 0);
+  REQUIRE(f.coordsMap().cols() == 0);
+}
+
+
+TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
+  ArrayX2i coords(2, 2);
+  coords.row(0)= Array2i(1, 1);  // pixel at          center of 3x3
+  coords.row(1)= Array2i(1, -1); // pixel oob left of center of 3x3
+  Fill const f(coords, image1, width1, height1);
+  REQUIRE(f.coordsMap().rows() == 0);
+  REQUIRE(f.coordsMap().cols() == 0);
+}
+
+
+TEST_CASE("Constructor checks corner.", "[Fill]") {
+  ArrayX2i coords(2, 2);
+  coords.row(0)= Array2i(1, 1); // pixel at center of 3x3
+  coords.row(1)= Array2i(2, 2); // pixel in lower-right corner
+  Fill const f(coords, image1, width1, height1);
+  REQUIRE(f.coordsMap().rows() == 0);
+  REQUIRE(f.coordsMap().cols() == 0);
 }
 
 

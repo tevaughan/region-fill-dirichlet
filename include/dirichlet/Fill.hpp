@@ -30,6 +30,9 @@ class Fill {
   /// Function called by constructor to initialize value returned by
   /// coordsMap().
   ///
+  /// Empty matrix is returned if any coordinates be out of bounds or in corner
+  /// of image.
+  ///
   /// \param coords  Row-column pairs, each pair holding rectangular
   ///                coordinates of pixel to be filled according to
   ///                Dirichlet-problem.  `coords(i,0)` holds image-row-offset
@@ -112,6 +115,9 @@ public:
   /// type, then solution is not just stored in instance but also (converted to
   /// `C` if necessary and) copied back into image specified in constructor.
   ///
+  /// Solution is empty if any specified coordinates be out of bounds or in
+  /// corder of image.
+  ///
   /// \return  Solution to linear system.
   ///
   ArrayXf const &x() const { return x_; }
@@ -136,15 +142,36 @@ public:
 
 // Implementation below.
 
+#include <iostream>
+
 namespace dirichlet {
 
 
 using Eigen::ArrayXi;
 using Eigen::Map;
+using std::cerr;
+using std::endl;
 
 
 inline ArrayXXi
 Fill::initCoords(ArrayX2i const coords, unsigned width, unsigned height) {
+  auto roob= (coords.col(0) < 0) || (coords.col(0) >= height);
+  auto coob= (coords.col(1) < 0) || (coords.col(1) >= width);
+  auto rlo = (coords.col(0) == 0);
+  auto clo = (coords.col(1) == 0);
+  auto rhi = (coords.col(0) == height - 1);
+  auto chi = (coords.col(1) == width - 1);
+  auto crnr= (rlo && clo) || (rlo && chi) || (rhi && clo) || (rhi && chi);
+  if((roob || coob || crnr).cast<int>().sum() > 0) {
+    cerr << "Fill::initCoords: WARNING: out of bounds or corner\n"
+         << "roob:\n"
+         << roob << "\n"
+         << "coob:\n"
+         << coob << "\n"
+         << "crnr:\n"
+         << crnr << endl;
+    return ArrayXXi();
+  }
   ArrayXXi      cmap(ArrayXXi::Constant(height, width, -1));
   ArrayXi const lin= coords.col(0) + coords.col(1) * height;
   Map<ArrayXi>  m(&cmap(0, 0), height * width, 1);
