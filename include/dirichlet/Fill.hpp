@@ -1,13 +1,13 @@
 /// \file       include/dirichlet/Fill.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
-/// \brief      Declaration of dirichlet::Fill.
+/// \brief      Definition of dirichlet::Coords, dirichlet::Fill.
 
 #ifndef DIRICHLET_FILL_HPP
 #define DIRICHLET_FILL_HPP
 
 #include <eigen3/Eigen/Dense> // ArrayX2i, ArrayXf, ArrayXXi, ArrayXi, Map
 
-/// Namespace for code solving Dirichlet-problem for zero-valued Laplacian
+/// Namespace for code that solves Dirichlet-problem for zero-valued Laplacian
 /// across specified pixels in image.
 namespace dirichlet {
 
@@ -16,16 +16,24 @@ using Eigen::ArrayXf;  // For solution.
 using Eigen::ArrayXXi; // For coordinates-map.
 
 
-/// Type used for passing row-column pairs, each pair holding rectangular
-/// coordinates of pixel to be filled according to Dirichlet-problem.  For
-/// instance `coords` of type `Coords`,
-/// - `coords(i,0)` holds image-row of `i`th pixel to be filled, and
-/// - `coords(i,1)` holds image-col of `i`th pixel to be filled.
+/// Type used by Fill for receiving row-column pairs, each holding rectangular
+/// coordinates of pixel to be filled in (as hole might be filled in) according
+/// to Dirichlet-problem.  If `coords` be instance of type `%Coords`, then
+///
+/// - `coords(i,0)` holds offset of row    of `i`th pixel to be filled, and
+/// - `coords(i,1)` holds offset of column of `i`th pixel to be filled.
+///
+/// Every pixel specified by `coords` must be in interior of image; no pixel in
+/// `coords` may be at edge of image.  If region that must be filled extend to
+/// edge of image, then pixels along edge must first be filled by other means,
+/// and, after that, Fill may be instantiated to fill in interior holes.
 using Coords= Eigen::ArrayX2i;
 
 
-/// Solution to Dirichlet-problem for zero-valued Laplacian across specified
-/// pixels in image.
+/// Fill one or more holes of any size in image by solving Dirichlet-problem
+/// for zero-valued Laplacian across specified hole-pixels in image.  Every
+/// pixel specified as to be filled must be in interior of image; no such pixel
+/// may be at edge of image.  See documentation for Coords.
 class Fill {
   /// Solution to linear system.  See documentation for x().
   ArrayXf x_;
@@ -36,7 +44,8 @@ class Fill {
 
   /// Verify that coordinates support well defined solution.
   ///
-  /// Return false if any coordinates be out of bounds or in corner of image.
+  /// Return false if any coordinates be out of bounds.  Every pixel on edge of
+  /// image is out of bounds.  See documentation for Coords.
   ///
   /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
@@ -49,7 +58,8 @@ class Fill {
   /// Compute initializer for value returned by coordsMap().
   ///
   /// Empty matrix is returned if any coordinates be out of bounds or in corner
-  /// of image.
+  /// of image.  Every pixel on edge of image is out of bounds.  See
+  /// documentation for Coords.
   ///
   /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
@@ -64,13 +74,10 @@ public:
   /// `coords`, calculate value with which pixel should be filled, according to
   /// Dirichlet-problem for `coords`.
   ///
-  /// If pixel specified in `coords` lie on edge of image, then only component
-  /// of Laplacian parallel to edge is set to zero in constraining pixel's
-  /// value.  Component of Laplacian perpendicular to edge is ignored if pixel
-  /// be on edge of image.
-  ///
-  /// Every pixel specified in `coords` must lie in image and *not* at corner
-  /// of image.  Otherwise, no solution is computed.
+  /// Every pixel specified in `coords` must lie in interior of image; every
+  /// pixel on edge of image is out of bounds.  If any pixel specified in
+  /// `coords` be out of bounds, then no solution is computed.  See
+  /// documentation for Coords.
   ///
   /// \tparam C        Type of each component of each pixel pointed to by
   ///                  `image`.  If `C` be non-const type, then solution is
@@ -166,23 +173,15 @@ using std::endl;
 
 inline bool
 Fill::coordsGood(Coords const &coords, unsigned width, unsigned height) {
-  auto roob= (coords.col(0) < 0) || (coords.col(0) >= height);
-  auto coob= (coords.col(1) < 0) || (coords.col(1) >= width);
-  auto rlo = (coords.col(0) == 0);
-  auto clo = (coords.col(1) == 0);
-  auto rhi = (coords.col(0) == height - 1);
-  auto chi = (coords.col(1) == width - 1);
-  auto crnr= (rlo && clo) || (rlo && chi) || (rhi && clo) || (rhi && chi);
-  if((roob || coob || crnr).cast<int>().sum() > 0) {
+  auto roob= (coords.col(0) <= 0) || (coords.col(0) >= height - 1);
+  auto coob= (coords.col(1) <= 0) || (coords.col(1) >= width - 1);
+  if((roob || coob).cast<int>().sum() > 0) {
     char const w[]= "Fill::coordsGood: WARNING: ";
     for(int i= 0; i < roob.size(); ++i) {
-      int const r= coords(i, 0), c= coords(i, 1);
+      int const r= coords(i, 0);
+      int const c= coords(i, 1);
       if(roob[i]) cerr << w << "r(" << i << ")=" << r << " OOB" << endl;
       if(coob[i]) cerr << w << "c(" << i << ")=" << c << " OOB" << endl;
-      if(crnr[i]) {
-        cerr << w << "off=" << i << ": (" << r << "," << c << ") at corner"
-             << endl;
-      }
     }
     return false;
   }

@@ -7,40 +7,57 @@
 #include <iostream>           // cout, endl
 
 
+using dirichlet::Coords;
 using dirichlet::Fill;
 using Eigen::Array2i;
-using Eigen::ArrayX2i;
 using std::cout;
 using std::endl;
 
 
-uint8_t  image1[]= {0, 1, 2, 3, 4, 5, 6, 7, 8};
-unsigned width1  = 3;
-unsigned height1 = 3;
+uint8_t  image1[]= {0,  1,  2,  3,  //
+                    4,  5,  6,  7,  //
+                    8,  9,  10, 11, //
+                    12, 13, 14, 15, //
+                    16, 17, 18, 19};
+
+unsigned width1  = 4;
+unsigned height1 = 5;
 
 
 TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
-  ArrayX2i coords(2, 2);
-  coords.row(0)= Array2i(1, 1); // pixel at         center of 3x3
-  coords.row(1)= Array2i(2, 1); // pixel just below center of 3x3
+  Coords coords(3, 2);
+  coords.row(0)= Array2i(1, 1);
+  coords.row(1)= Array2i(2, 1);
+  coords.row(2)= Array2i(3, 2);
   Fill const f(coords, image1, width1, height1);
   cout << "coordsMap:\n" << f.coordsMap() << endl;
   REQUIRE(f.coordsMap()(0, 0) == -1);
   REQUIRE(f.coordsMap()(1, 0) == -1);
   REQUIRE(f.coordsMap()(2, 0) == -1);
+  REQUIRE(f.coordsMap()(3, 0) == -1);
+  REQUIRE(f.coordsMap()(4, 0) == -1);
   REQUIRE(f.coordsMap()(0, 1) == -1);
   REQUIRE(f.coordsMap()(1, 1) == +0);
   REQUIRE(f.coordsMap()(2, 1) == +1);
+  REQUIRE(f.coordsMap()(3, 1) == -1);
+  REQUIRE(f.coordsMap()(4, 1) == -1);
   REQUIRE(f.coordsMap()(0, 2) == -1);
   REQUIRE(f.coordsMap()(1, 2) == -1);
-  REQUIRE(f.coordsMap()(2, 0) == -1);
+  REQUIRE(f.coordsMap()(2, 2) == -1);
+  REQUIRE(f.coordsMap()(3, 2) == +2);
+  REQUIRE(f.coordsMap()(4, 2) == -1);
+  REQUIRE(f.coordsMap()(0, 3) == -1);
+  REQUIRE(f.coordsMap()(1, 3) == -1);
+  REQUIRE(f.coordsMap()(2, 3) == -1);
+  REQUIRE(f.coordsMap()(3, 3) == -1);
+  REQUIRE(f.coordsMap()(4, 3) == -1);
 }
 
 
 TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
-  ArrayX2i coords(2, 2);
-  coords.row(0)= Array2i(1, 1); // pixel at        center of 3x3
-  coords.row(1)= Array2i(3, 1); // pixel oob below center of 3x3
+  Coords coords(2, 2);
+  coords.row(0)= Array2i(1, 1);
+  coords.row(1)= Array2i(4, 1); // pixel oob on bottom edge
   Fill const f(coords, image1, width1, height1);
   REQUIRE(f.coordsMap().rows() == 0);
   REQUIRE(f.coordsMap().cols() == 0);
@@ -48,9 +65,9 @@ TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
-  ArrayX2i coords(2, 2);
-  coords.row(0)= Array2i(1, 1);  // pixel at        center of 3x3
-  coords.row(1)= Array2i(-1, 1); // pixel oob above center of 3x3
+  Coords coords(2, 2);
+  coords.row(0)= Array2i(1, 1);
+  coords.row(1)= Array2i(-1, 1); // pixel oob left of left edge
   Fill const f(coords, image1, width1, height1);
   REQUIRE(f.coordsMap().rows() == 0);
   REQUIRE(f.coordsMap().cols() == 0);
@@ -58,9 +75,9 @@ TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
-  ArrayX2i coords(2, 2);
-  coords.row(0)= Array2i(1, 1); // pixel at           center of 3x3
-  coords.row(1)= Array2i(1, 3); // pixel oob right of center of 3x3
+  Coords coords(2, 2);
+  coords.row(0)= Array2i(1, 1);
+  coords.row(1)= Array2i(1, 3); // pixel oob on right edge
   Fill const f(coords, image1, width1, height1);
   REQUIRE(f.coordsMap().rows() == 0);
   REQUIRE(f.coordsMap().cols() == 0);
@@ -68,19 +85,9 @@ TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
-  ArrayX2i coords(2, 2);
-  coords.row(0)= Array2i(1, 1);  // pixel at          center of 3x3
-  coords.row(1)= Array2i(1, -1); // pixel oob left of center of 3x3
-  Fill const f(coords, image1, width1, height1);
-  REQUIRE(f.coordsMap().rows() == 0);
-  REQUIRE(f.coordsMap().cols() == 0);
-}
-
-
-TEST_CASE("Constructor checks corner.", "[Fill]") {
-  ArrayX2i coords(2, 2);
-  coords.row(0)= Array2i(1, 1); // pixel at center of 3x3
-  coords.row(1)= Array2i(2, 2); // pixel in lower-right corner
+  Coords coords(2, 2);
+  coords.row(0)= Array2i(1, 1);
+  coords.row(1)= Array2i(1, -1); // pixel oob above top edge
   Fill const f(coords, image1, width1, height1);
   REQUIRE(f.coordsMap().rows() == 0);
   REQUIRE(f.coordsMap().cols() == 0);
