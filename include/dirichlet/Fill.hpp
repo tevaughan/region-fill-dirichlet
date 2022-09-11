@@ -35,13 +35,16 @@ class Fill {
 
 public:
   /// Analyze image, and, for each pixel whose location is specified in
-  /// `coords`, calculate value with which pixel should be filled, according to
-  /// Dirichlet-problem for `coords`.
+  /// `coords`, calculate value with which pixel should be filled.
+  ///
+  /// Values to fill with are calculated according to Dirichlet-problem for
+  /// filling pixels P, specified by `coords`, on basis of pixels B on boundary
+  /// of P.
   ///
   /// Every pixel specified in `coords` must lie in interior of image; every
-  /// pixel on edge of image is out of bounds.  If any pixel specified in
-  /// `coords` be out of bounds, then no solution is computed.  See
-  /// documentation for Coords.
+  /// pixel on edge of image can serve as boundary-condition but cannot be
+  /// filled.  If any pixel specified in `coords` be out of bounds, then no
+  /// solution is computed.  See documentation for Coords.
   ///
   /// \tparam C        Type of each component of each pixel pointed to by
   ///                  `image`.  If `C` be non-const type, then solution is
