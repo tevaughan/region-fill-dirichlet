@@ -33,6 +33,12 @@ class Fill {
   /// coordsMap().
   ArrayXXi coordsMap_;
 
+  /// coordsMap_ as single column.
+  /// \return  coordsMap_ as single column.
+  auto cmCol() const {
+    return Map<ArrayXi const>(&coordsMap_(0, 0), wdth_ * hght_, 1);
+  }
+
 public:
   /// Prepare to fill one or more single-component images of size
   /// `width*height`.
@@ -121,8 +127,7 @@ public:
   /// \return  Column whose height is same as height of `coords`.
   ///
   auto nLft() const {
-    Map<ArrayXi const> m(&coordsMap_(0, 0), wdth_ * hght_, 1);
-    return m(coords_.col(0) + (coords_.col(1) - 1) * hght_);
+    return cmCol()(coords_.col(0) + (coords_.col(1) - 1) * hght_);
   }
 
   /// Expression-template for column containing value of right neighbor in
@@ -136,8 +141,7 @@ public:
   /// \return  Column whose height is same as height of `coords`.
   ///
   auto nRgt() const {
-    Map<ArrayXi const> m(&coordsMap_(0, 0), wdth_ * hght_, 1);
-    return m(coords_.col(0) + (coords_.col(1) + 1) * hght_);
+    return cmCol()(coords_.col(0) + (coords_.col(1) + 1) * hght_);
   }
 
   /// Expression-template for column containing value of top neighbor in
@@ -151,8 +155,7 @@ public:
   /// \return  Column whose height is same as height of `coords`.
   ///
   auto nTop() const {
-    Map<ArrayXi const> m(&coordsMap_(0, 0), wdth_ * hght_, 1);
-    return m(coords_.col(0) - 1 + coords_.col(1) * hght_);
+    return cmCol()(coords_.col(0) - 1 + coords_.col(1) * hght_);
   }
 
   /// Expression-template for column containing value of bottom neighbor in
@@ -166,8 +169,7 @@ public:
   /// \return  Column whose height is same as height of `coords`.
   ///
   auto nBot() const {
-    Map<ArrayXi const> m(&coordsMap_(0, 0), wdth_ * hght_, 1);
-    return m(coords_.col(0) + 1 + coords_.col(1) * hght_);
+    return cmCol()(coords_.col(0) + 1 + coords_.col(1) * hght_);
   }
 };
 
