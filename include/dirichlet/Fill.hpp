@@ -1,6 +1,6 @@
 /// \file       include/dirichlet/Fill.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
-/// \brief      Definition of dirichlet::Coords, dirichlet::Fill.
+/// \brief      Definition of dirichlet::Fill.
 
 #ifndef DIRICHLET_FILL_HPP
 #define DIRICHLET_FILL_HPP
@@ -24,9 +24,14 @@ class Fill {
   /// Solution to linear system.  See documentation for x().
   ArrayXXf x_;
 
-  /// Map from rectangular coordinates of pixel in solution to offset in array
-  /// returned by x().  See documentation for coordsMap().
+  /// Map from rectangular coordinates of filled pixel to offset of row in
+  /// matrix returned by x().  See documentation for coordsMap().
   ArrayXXi coordsMap_;
+
+  /// For each coordinate-pair indicating pixel to be filled, value for each of
+  /// left-, right-, top-, and bottom-neighbors in matrix returned by
+  /// coordsMap().  See documentation for lrtb().
+  ArrayXXi lrtb_;
 
 public:
   /// Analyze image, and, for each pixel whose location is specified in
@@ -96,7 +101,7 @@ public:
   ///
   ArrayXXf const &x() const { return x_; }
 
-  /// Map from rectangular coordinates of pixel in solution to offset of row in
+  /// Map from rectangular coordinates of filled pixel to offset of row in
   /// matrix returned by x().
   ///
   /// Returned matrix has `height` rows and `width` columns.  Each element has
@@ -108,10 +113,28 @@ public:
   /// Array is empty if any specified coordinates be out of bounds or in corder
   /// of image.
   ///
-  /// \return  Map from rectangular coordinates of pixel in solution to offset
-  ///          of row in matrix returned by x().
+  /// \return  Map from rectangular coordinates of filled pixel to offset of
+  ///          row in matrix returned by x().
   ///
   ArrayXXi const &coordsMap() const { return coordsMap_; }
+
+  /// For each coordinate-pair indicating pixel to be filled, value for each of
+  /// left-, right-, top-, and bottom-neighbors in matrix returned by
+  /// coordsMap().
+  ///
+  /// Matrix returned has four columns (left, right, top, and bottom,
+  /// respectively).  In matrix returned by coordsMap(), if element at `(r,c)`
+  /// contain offset `i` (rather than -1), then columns in row `i` of matrix
+  /// returned by %lrtb() contain values, respectively, of elements at
+  /// `(r,c-1)`, `(r,c+1)`, `(r-1,c)`, and `(r+1,c)` in matrix returned by
+  /// coordsMap().
+  ///
+  /// If value in some element of returned matrix be -1, then corresponding
+  /// pixel is on boundary of hole.
+  ///
+  /// \return  Value for each of left-, right-, top-, and bottom-neighbors in
+  ///          matrix returned by coordsMap().
+  ArrayXXi const &lrtb() const { return lrtb_; }
 };
 
 

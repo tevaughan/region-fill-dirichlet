@@ -44,10 +44,10 @@ initCoords(Coords const &coords, unsigned width, unsigned height) {
     }
     return ArrayXXi();
   }
-  ArrayXXi      cmap(ArrayXXi::Constant(height, width, -1));
-  ArrayXi const lin= coords.col(0) + coords.col(1) * height;
-  Map<ArrayXi>  m(&cmap(0, 0), height * width, 1);
+  ArrayXXi      cmap     = ArrayXXi::Constant(height, width, -1);
+  ArrayXi const lin      = coords.col(0) + coords.col(1) * height;
   int const     numCoords= coords.rows();
+  Map<ArrayXi>  m(&cmap(0, 0), height * width, 1);
   // Assign offset of coordinate-pair to its grid-cell in cmap.
   m(lin)= ArrayXi::LinSpaced(numCoords, 0, numCoords - 1);
   return cmap;
