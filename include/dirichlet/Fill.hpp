@@ -122,15 +122,14 @@ public:
   /// left-, right-, top-, and bottom-neighbors in matrix returned by
   /// coordsMap().
   ///
-  /// Matrix returned has four columns (left, right, top, and bottom,
-  /// respectively).  In matrix returned by coordsMap(), if element at `(r,c)`
-  /// contain offset `i` (rather than -1), then columns in row `i` of matrix
-  /// returned by %lrtb() contain values, respectively, of elements at
-  /// `(r,c-1)`, `(r,c+1)`, `(r-1,c)`, and `(r+1,c)` in matrix returned by
-  /// coordsMap().
+  /// Matrix returned by %lrtb() has four columns.  In matrix returned by
+  /// coordsMap(), if element at `(r,c)` contain value `i` (rather than -1),
+  /// then columns in row `i` of matrix returned by %lrtb() contain values,
+  /// respectively, of elements at `(r,c-1)`, `(r,c+1)`, `(r-1,c)`, and
+  /// `(r+1,c)` in matrix returned by coordsMap().
   ///
-  /// If value in some element of returned matrix be -1, then corresponding
-  /// pixel is on boundary of hole.
+  /// If value in some element of matrix returned by %lrtb be -1, then
+  /// corresponding pixel is on boundary of hole.
   ///
   /// \return  Value for each of left-, right-, top-, and bottom-neighbors in
   ///          matrix returned by coordsMap().
