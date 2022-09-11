@@ -19,14 +19,20 @@ using Eigen::Map;
 using Eigen::VectorXf;
 
 
-/// Fill one or more holes of any size in image by solving Dirichlet-problem
-/// for zero-valued Laplacian across specified hole-pixels in image.  Every
-/// pixel specified as to be filled must be in interior of image; no such pixel
-/// may be at edge of image.  See documentation for Coords.
+/// Fill holes in image by solving Dirichlet-problem for zero-valued Laplacian
+/// across specified hole-pixels in image.
+///
+/// Every pixel specified as to be filled must be in interior of image; no such
+/// pixel may be at edge of image.  See documentation for Coords.
+///
+/// Instantiating `%Fill` does all preparatory work necessary to enable quick
+/// filling of same coordinates in one or more images of same size.
+///
+/// Filling image happens when instance is used as function-object.
 class Fill {
-  Coords const &coords_; ///< Coordinates of each filled pixel.
-  unsigned      wdth_;   ///< Number of columns in image.
-  unsigned      hght_;   ///< Number of rows    in image.
+  Coords const &coords_; ///< Coordinates of filled pixels in each image.
+  unsigned      wdth_;   ///< Number of columns in each image to fill.
+  unsigned      hght_;   ///< Number of rows    in each image to fill.
 
   /// Map from rectangular coordinates of filled pixel to offset of same
   /// coordinates in value returned by coords().  See documentation for
@@ -40,11 +46,11 @@ class Fill {
   }
 
 public:
-  /// Prepare to fill one or more single-component images of size
-  /// `width*height`.
+  /// Prepare to fill pixels given by `coords` in one or more single-component
+  /// images of size `width*height`.
   ///
-  /// Values to fill with are calculated according to Dirichlet-problem for
-  /// filling pixels `P`, specified by `coords`, on basis of pixels `B` on
+  /// Values to fill with are later calculated according to Dirichlet-problem
+  /// for filling pixels `P`, specified by `coords`, on basis of pixels `B` on
   /// boundary of P.
   ///
   /// Every pixel specified in `coords` must lie in interior of image; every
@@ -62,24 +68,23 @@ public:
   /// \return  Coordinates of each filled pixel.
   Coords const &coords() const { return coords_; }
 
-  /// Solution to linear system for one component of image; if image be gray
-  /// (and so have only one component), the solution is complete solution for
-  /// image.
+  /// Fill pixels by calculating solution to linear system for one
+  /// color-component of image.
   ///
   /// Each row in solution corresponds to different pixel.  Order of rows in
   /// solution is same as order of rows in `coords` as specified in call to
   /// constructor.
   ///
   /// What is stored in each element of solution is value of pixel's component
-  /// satisfying zero value for Laplacian of component at location of
-  /// component.
+  /// satisfying zero Laplacian of component at location of component.
   ///
   /// If template-parameter `Comp` be non-const type, then solution is not just
   /// returned but also (converted to `Comp` if necessary and) copied back into
   /// image.
   ///
-  /// Solution is empty if any specified coordinates be out of bounds or in
-  /// corder of image.
+  /// Solution is empty if any specified coordinates be out of bounds.
+  /// (Coordinates on edge of image are out of bounds for filling.  See
+  /// documentation for Coords.)
   ///
   /// \tparam Comp   Type of each component in image.
   ///
@@ -100,16 +105,17 @@ public:
   template<typename Comp>
   VectorXf operator()(Comp *image, unsigned stride= 1) const;
 
-  /// Map from rectangular coordinates of filled pixel to offset of row in
-  /// value returned by coords().
+  /// Map from rectangular coordinates of filled pixel to offset of same
+  /// coordinates in value returned by coords().
   ///
-  /// Returned matrix has `height` rows and `width` columns.  Each element has
-  /// value -1 except at coordinates in solution.  If coordinates be in
-  /// solution, then element contains offset coordinates in value returned by
-  /// coords().
+  /// Returned matrix has same size as image and as dimensions supplied to
+  /// constructor.  Each element has value -1 except at coordinates to be
+  /// filled.  If coordinates be for filling, then element contains offset of
+  /// same coordinates in value returned by coords().
   ///
-  /// Array is empty if any specified coordinates be out of bounds or in corder
-  /// of image.
+  /// Array is empty if any specified coordinates be out of bounds.
+  /// (Coordinates on edge of image are out of bounds for filling.  See
+  /// documentation for Coords.)
   ///
   /// \return  Map from rectangular coordinates of filled pixel to offset of
   ///          same coordinates in value returned by coords().
