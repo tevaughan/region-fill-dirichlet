@@ -47,14 +47,15 @@ initCoords(Coords const &coords, unsigned width, unsigned height) {
   ArrayXXi      cmap(ArrayXXi::Constant(height, width, -1));
   ArrayXi const lin= coords.col(0) + coords.col(1) * height;
   Map<ArrayXi>  m(&cmap(0, 0), height * width, 1);
-  m(lin)= ArrayXi::LinSpaced(coords.rows(), 0, coords.rows() - 1);
+  int const     numCoords= coords.rows();
+  // Assign offset of coordinate-pair to its grid-cell in cmap.
+  m(lin)= ArrayXi::LinSpaced(numCoords, 0, numCoords - 1);
   return cmap;
 }
 
 
-} // namespace dirichlet
+} // namespace dirichlet::impl
 
 #endif // ndef DIRICHLET_IMPL_INIT_COORDS_HPP
 
 // EOF
-

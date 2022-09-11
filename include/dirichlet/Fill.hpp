@@ -12,7 +12,7 @@
 namespace dirichlet {
 
 
-using Eigen::ArrayXf;  // For solution.
+using Eigen::ArrayXXf; // For solution.
 using Eigen::ArrayXXi; // For coordinates-map.
 
 
@@ -22,7 +22,7 @@ using Eigen::ArrayXXi; // For coordinates-map.
 /// may be at edge of image.  See documentation for Coords.
 class Fill {
   /// Solution to linear system.  See documentation for x().
-  ArrayXf x_;
+  ArrayXXf x_;
 
   /// Map from rectangular coordinates of pixel in solution to offset in array
   /// returned by x().  See documentation for coordsMap().
@@ -94,7 +94,7 @@ public:
   ///
   /// \return  Solution to linear system.
   ///
-  ArrayXf const &x() const { return x_; }
+  ArrayXXf const &x() const { return x_; }
 
   /// Map from rectangular coordinates of pixel in solution to offset of row in
   /// matrix returned by x().

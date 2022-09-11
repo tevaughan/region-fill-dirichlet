@@ -12,6 +12,9 @@
 namespace dirichlet {
 
 
+using Eigen::ArrayX2i;
+
+
 /// Type used by Fill for receiving row-column pairs, each holding rectangular
 /// coordinates of pixel to be filled in (as hole might be filled in) according
 /// to Dirichlet-problem.  If `coords` be instance of type `%Coords`, then
@@ -24,7 +27,11 @@ namespace dirichlet {
 /// filled in extend to edge of image, then pixels along edge must first be
 /// filled in by other means, and, after that, Fill may be instantiated to fill
 /// in interior holes.
-using Coords= Eigen::ArrayX2i;
+struct Coords: public ArrayX2i {
+  /// Allocate space for `nr` coordinate-pairs.
+  /// \param nr  Number of coordinate-pairs.
+  Coords(int nr= 0): ArrayX2i(nr, 2) {}
+};
 
 
 } // namespace dirichlet

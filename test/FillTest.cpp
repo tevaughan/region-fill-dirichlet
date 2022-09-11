@@ -14,18 +14,18 @@ using std::cout;
 using std::endl;
 
 
-uint8_t  image1[]= {0,  1,  2,  3,  //
-                    4,  5,  6,  7,  //
-                    8,  9,  10, 11, //
-                    12, 13, 14, 15, //
-                    16, 17, 18, 19};
+uint8_t image1[]= {0,  1,  2,  3,  //
+                   4,  5,  6,  7,  //
+                   8,  9,  10, 11, //
+                   12, 13, 14, 15, //
+                   16, 17, 18, 19};
 
-unsigned width1  = 4;
-unsigned height1 = 5;
+unsigned width1 = 4;
+unsigned height1= 5;
 
 
 TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
-  Coords coords(3, 2);
+  Coords coords(3);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(2, 1);
   coords.row(2)= Array2i(3, 2);
@@ -55,7 +55,7 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
-  Coords coords(2, 2);
+  Coords coords(2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(4, 1); // pixel oob on bottom edge
   Fill const f(coords, image1, width1, height1);
@@ -65,7 +65,7 @@ TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
-  Coords coords(2, 2);
+  Coords coords(2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(-1, 1); // pixel oob left of left edge
   Fill const f(coords, image1, width1, height1);
@@ -75,7 +75,7 @@ TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
-  Coords coords(2, 2);
+  Coords coords(2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, 3); // pixel oob on right edge
   Fill const f(coords, image1, width1, height1);
@@ -85,7 +85,7 @@ TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
-  Coords coords(2, 2);
+  Coords coords(2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, -1); // pixel oob above top edge
   Fill const f(coords, image1, width1, height1);
