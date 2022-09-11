@@ -144,6 +144,7 @@ public:
 
 // Implementation below.
 
+#include "impl/coordsGood.hpp" // coordsGood()
 #include "impl/initCoords.hpp" // initCoords()
 #include "impl/initLrtb.hpp"   // initLrtb()
 
@@ -151,6 +152,7 @@ public:
 namespace dirichlet {
 
 
+using impl::coordsGood;
 using impl::initCoords;
 using impl::initLrtb;
 
@@ -162,9 +164,9 @@ Fill::Fill(
       unsigned      width,
       unsigned      height,
       unsigned      numComps) {
+  if(!coordsGood(coords, width, height)) return;
   coordsMap_= initCoords(coords, width, height);
-  if(coordsMap_.rows() == 0) return;
-  lrtb_= initLrtb(coords, coordsMap_);
+  lrtb_     = initLrtb(coords, coordsMap_);
   // TBS
 }
 
