@@ -8,8 +8,6 @@
 #include "../Coords.hpp" // Coords and classes in Eigen/Dense
 #include <iostream>      // cerr, endl
 
-/// Namespace for code that solves Dirichlet-problem for zero-valued Laplacian
-/// across specified pixels in image.
 namespace dirichlet::impl {
 
 
