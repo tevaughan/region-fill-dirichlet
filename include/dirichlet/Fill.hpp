@@ -5,7 +5,7 @@
 #ifndef DIRICHLET_FILL_HPP
 #define DIRICHLET_FILL_HPP
 
-#include "impl/initCoords.hpp" // initCoords(), Coords, Eigen/Dense
+#include "Coords.hpp" // Coords, Eigen/Dense
 
 /// Namespace for code that solves Dirichlet-problem for zero-valued Laplacian
 /// across specified pixels in image.
@@ -142,15 +142,15 @@ public:
 
 // Implementation below.
 
-#include <iostream>
+#include "impl/initCoords.hpp" // initCoords()
+#include "impl/initLrtb.hpp"   // initLrtb()
+
 
 namespace dirichlet {
 
 
-using Eigen::ArrayXi;
-using Eigen::Map;
-using std::cerr;
-using std::endl;
+using impl::initCoords;
+using impl::initLrtb;
 
 
 template<typename C>
@@ -159,9 +159,10 @@ Fill::Fill(
       C            *image,
       unsigned      width,
       unsigned      height,
-      unsigned      numComps):
-    coordsMap_(impl::initCoords(coords, width, height)) {
+      unsigned      numComps) {
+  coordsMap_= initCoords(coords, width, height);
   if(coordsMap_.rows() == 0) return;
+  lrtb_= initLrtb(coords, coordsMap_);
   // TBS
 }
 

@@ -31,6 +31,7 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
   coords.row(2)= Array2i(3, 2);
   Fill const f(coords, image1, width1, height1);
   cout << "coordsMap:\n" << f.coordsMap() << endl;
+  cout << "lrtb:\n" << f.lrtb() << endl;
   REQUIRE(f.coordsMap()(0, 0) == -1);
   REQUIRE(f.coordsMap()(1, 0) == -1);
   REQUIRE(f.coordsMap()(2, 0) == -1);
