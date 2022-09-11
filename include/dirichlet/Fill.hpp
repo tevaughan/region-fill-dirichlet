@@ -23,10 +23,11 @@ using Eigen::ArrayXXi; // For coordinates-map.
 /// - `coords(i,0)` holds offset of row    of `i`th pixel to be filled, and
 /// - `coords(i,1)` holds offset of column of `i`th pixel to be filled.
 ///
-/// Every pixel specified by `coords` must be in interior of image; no pixel in
-/// `coords` may be at edge of image.  If region that must be filled extend to
-/// edge of image, then pixels along edge must first be filled by other means,
-/// and, after that, Fill may be instantiated to fill in interior holes.
+/// Every pixel specified by `coords` must be in interior of image; no pixel
+/// specified in `coords` may be at edge of image.  If region that must be
+/// filled in extend to edge of image, then pixels along edge must first be
+/// filled in by other means, and, after that, Fill may be instantiated to fill
+/// in interior holes.
 using Coords= Eigen::ArrayX2i;
 
 
