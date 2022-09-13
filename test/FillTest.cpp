@@ -2,9 +2,9 @@
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
 /// \brief      Tests for dirichlet::Fill.
 
-#include "dirichlet/Fill.hpp" // Fill
-#include <catch2/catch.hpp>   // TEST_CASE
-#include <iostream>           // cout, endl
+#include "dirichlet/Fill.hpp"           // Fill
+#include <catch2/catch_test_macros.hpp> // TEST_CASE
+#include <iostream>                     // cout, endl
 
 
 using dirichlet::Coords;

@@ -3,10 +3,14 @@
 
 CXXFLAGS:= -Wall -g
 CPPFLAGS:= -I../include
+CC:= $(CXX)
+LDLIBS:= -lCatch2Main -lCatch2
 
 .PHONY: all clean
 
-all : utest
+all : FillTest
+
+FillTest : FillTest.o
 
 clean :
 	@rm -frv .d
@@ -14,14 +18,12 @@ clean :
 	@rm -fv utest
 
 # http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
-SRCS = utest.cpp FillTest.cpp
-CC = $(CXX)
-utest : utest.o FillTest.o
-DEPDIR := .d
+SRCS:= FillTest.cpp
+DEPDIR= .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
-DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
-COMPILE.cc = $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
-POSTCOMPILE = @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
+DEPFLAGS= -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
+COMPILE.cc= $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
+POSTCOMPILE= @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
 %.o : %.cpp
 %.o : %.cpp $(DEPDIR)/%.d
 	$(COMPILE.cc) $(OUTPUT_OPTION) $<

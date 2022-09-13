@@ -38,6 +38,10 @@ Here are some images from my work:
 
 ## Redesign Under Namespace `dirichlet`
 
+Redesigned code require at least
+- Eigen-3.4
+- Catch2-3.0 (for unit-tests)
+
 After initial design and implementation as code
 under namespace `regfill`, improved design and
 implementation is under namespace `dirichlet`.
