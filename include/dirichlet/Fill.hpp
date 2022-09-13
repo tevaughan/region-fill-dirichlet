@@ -18,6 +18,7 @@ using Eigen::ArrayXi;
 using Eigen::ArrayXXf;
 using Eigen::ArrayXXi;
 using Eigen::Map;
+using Eigen::SimplicialCholesky;
 using Eigen::SparseMatrix;
 using Eigen::VectorXf;
 
@@ -47,10 +48,16 @@ class Fill {
   ArrayX4i lrtb_;
 
   /// Square matrix for linear problem.
-  SparseMatrix<float> A_;
+  SparseMatrix<float> a_;
 
-  /// Bounary condition for linear problem.
-  VectorXf b_;
+  /// Pointer to Cholesky-decomposition of square matrix for linear problem.
+  SimplicialCholesky<SparseMatrix<float>> *A_;
+
+  /// Disallow copying because we store owned pointer.
+  Fill(Fill const &)= delete;
+
+  /// Disallow assignment because we store owned pointer.
+  Fill &operator=(Fill const &)= delete;
 
   /// coordsMap_ as single column.
   /// \return  coordsMap_ as single column.
@@ -120,6 +127,11 @@ public:
   ///
   Fill(Coords const &coords, unsigned width, unsigned height);
 
+  /// Deallocate Cholesky-decomposition.
+  virtual ~Fill() {
+    if(A_) delete A_;
+  }
+
   /// Coordinates of each filled pixel.
   /// \return  Coordinates of each filled pixel.
   Coords const &coords() const { return coords_; }
@@ -181,10 +193,11 @@ public:
   /// Matrix with four columns and with each row corresponding to different
   /// filled pixel, such that offset `rp` of row is offset in value returned by
   /// coords() for filled pixel `p`; each column corresponds to neighbor `n`
-  /// (left, right, top, and bottom, respectively) of `p`; for
-  /// boundary-neighbor, element `e` encodes *row-major* linear offset `i` of
-  /// `n` in image as `-1 - i`; for filled neighbor, `e` contains offset `rn`
-  /// of coordinates of filled neighbor in value returned by coords().
+  /// (left, right, top, and bottom, respectively) of `p`; if `n` be in
+  /// boundary (if `n` be not filled), element `e` of returned matrix encodes
+  /// *row-major* linear offset `i` of `n` in image as `e = -1 - i`; if `n` be
+  /// filled, `e = rn`, where `rn` is offset of coordinates of `n` in value
+  /// returned by coords().
   ///
   /// \return  Matrix with four columns to encode information about each
   ///          neighbor of each filled pixel.
@@ -205,7 +218,11 @@ public:
 namespace dirichlet {
 
 
+using Eigen::Array;
+using Eigen::Dynamic;
+using Eigen::RowMajor;
 using Eigen::Triplet;
+using Eigen::Unaligned;
 using impl::coordsGood;
 using impl::initCoords;
 using std::vector;
@@ -217,10 +234,20 @@ void Fill::initMatrix() {
   // five coefficients for each filled pixel that touches boundary of hole to
   // fill.  Only one coefficient for each filled pixel that touches no other
   // filled pixel (for filled pixel that touches only boundary-pixels).
-  t.reserve(coords_.size() * 5);
-  for(int i= 0; i < coords_.size(); ++i) {
+  t.reserve(coords_.rows() * 5);
+  for(int i= 0; i < coords_.rows(); ++i) {
     t.push_back({i, i, 4.0f});
+    int const lft= lrtb_(i, 0);
+    int const rgt= lrtb_(i, 1);
+    int const top= lrtb_(i, 2);
+    int const bot= lrtb_(i, 3);
+    if(lft >= 0) t.push_back({i, lft, -1.0f});
+    if(rgt >= 0) t.push_back({i, rgt, -1.0f});
+    if(top >= 0) t.push_back({i, top, -1.0f});
+    if(bot >= 0) t.push_back({i, bot, -1.0f});
   }
+  a_.setFromTriplets(t.begin(), t.end());
+  A_= new SimplicialCholesky<SparseMatrix<float>>(a_);
 }
 
 
@@ -229,15 +256,35 @@ Fill::Fill(Coords const &coords, unsigned width, unsigned height):
     wdth_(width),
     hght_(height),
     lrtb_(coords.rows(), 4),
-    A_(coords.rows(), coords.rows()),
-    b_(VectorXf::Zero(coords.rows())) {
+    a_(coords.rows(), coords.rows()) {
   if(!coordsGood(coords, width, height)) return;
-  coordsMap_= initCoords(coords, width, height);
+  coordsMap_  = initCoords(coords, width, height);
   lrtb_.col(0)= nLft();
   lrtb_.col(1)= nRgt();
   lrtb_.col(2)= nTop();
   lrtb_.col(3)= nBot();
-  // TBS
+  initMatrix();
+}
+
+
+template<typename Comp>
+VectorXf Fill::operator()(Comp *image, unsigned stride) const {
+  using Image = Array<Comp, Dynamic, Dynamic, RowMajor>;
+  using Stride= Eigen::Stride<1, Dynamic>;
+  Map<Image, Unaligned, Stride> im(image, hght_, wdth_, Stride(1, stride));
+  // First, calculate 1 for encoded offset; 0 for filled pixel.
+  auto const fL= (lrtb_.col(0) < 0).cast<int>();
+  auto const fR= (lrtb_.col(1) < 0).cast<int>();
+  auto const fT= (lrtb_.col(2) < 0).cast<int>();
+  auto const fB= (lrtb_.col(3) < 0).cast<int>();
+  // Next, clamp offsets at zero on the low end.
+  auto const iL= fL * (-lrtb_.col(0) - 1);
+  auto const iR= fR * (-lrtb_.col(1) - 1);
+  auto const iT= fT * (-lrtb_.col(2) - 1);
+  auto const iB= fB * (-lrtb_.col(3) - 1);
+  // Now pull pixel-data into b.
+  auto const b= fL * im(iL) + fR * im(iR) + fT * im(iT) + fB * im(iB);
+  return A_->solve(b);
 }
 
 
