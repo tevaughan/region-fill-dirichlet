@@ -51,22 +51,22 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
   REQUIRE(f.coordsMap()(2, 3) == -1);
   REQUIRE(f.coordsMap()(3, 3) == -1);
   REQUIRE(f.coordsMap()(4, 3) == -1);
-  auto const nLft= f.nLft();
-  auto const nRgt= f.nRgt();
-  auto const nTop= f.nTop();
-  auto const nBot= f.nBot();
-  REQUIRE(nLft(0) == -1);
-  REQUIRE(nLft(1) == -1);
-  REQUIRE(nLft(2) == -1);
-  REQUIRE(nRgt(0) == -1);
-  REQUIRE(nRgt(1) == -1);
-  REQUIRE(nRgt(2) == -1);
-  REQUIRE(nTop(0) == -1);
+  auto const nLft= f.lrtb().col(0);
+  auto const nRgt= f.lrtb().col(1);
+  auto const nTop= f.lrtb().col(2);
+  auto const nBot= f.lrtb().col(3);
+  REQUIRE(nLft(0) == -4 - 1);
+  REQUIRE(nLft(1) == -8 - 1);
+  REQUIRE(nLft(2) == -13 - 1);
+  REQUIRE(nRgt(0) == -6 - 1);
+  REQUIRE(nRgt(1) == -10 - 1);
+  REQUIRE(nRgt(2) == -15 - 1);
+  REQUIRE(nTop(0) == -1 - 1);
   REQUIRE(nTop(1) == 0);
-  REQUIRE(nTop(2) == -1);
+  REQUIRE(nTop(2) == -10 - 1);
   REQUIRE(nBot(0) == 1);
-  REQUIRE(nBot(1) == -1);
-  REQUIRE(nBot(2) == -1);
+  REQUIRE(nBot(1) == -13 - 1);
+  REQUIRE(nBot(2) == -18 - 1);
 }
 
 

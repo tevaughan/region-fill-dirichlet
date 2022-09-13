@@ -5,17 +5,20 @@
 #ifndef DIRICHLET_FILL_HPP
 #define DIRICHLET_FILL_HPP
 
-#include "Coords.hpp" // Coords, Eigen/Dense
+#include "Coords.hpp"          // Coords, Eigen/Dense
+#include <eigen3/Eigen/Sparse> // SparseMatrix
 
 /// Namespace for code that solves Dirichlet-problem for zero-valued Laplacian
 /// across specified pixels in image.
 namespace dirichlet {
 
 
+using Eigen::ArrayX4i;
 using Eigen::ArrayXi;
 using Eigen::ArrayXXf;
 using Eigen::ArrayXXi;
 using Eigen::Map;
+using Eigen::SparseMatrix;
 using Eigen::VectorXf;
 
 
@@ -39,11 +42,64 @@ class Fill {
   /// coordsMap().
   ArrayXXi coordsMap_;
 
+  /// Matrix with four columns to encode information about each neighbor of
+  /// each filled pixel.  See documentation for lrtb().
+  ArrayX4i lrtb_;
+
+  /// Square matrix for linear problem.
+  SparseMatrix<float> A_;
+
+  /// Bounary condition for linear problem.
+  VectorXf b_;
+
   /// coordsMap_ as single column.
   /// \return  coordsMap_ as single column.
   auto cmCol() const {
     return Map<ArrayXi const>(&coordsMap_(0, 0), wdth_ * hght_, 1);
   }
+
+  /// Expression-template for array, of which each element `e` contains
+  /// code-value corresponding to some neighbor `n` of filled pixel `p`.
+  ///
+  /// Element `e` at offset `i` in returned array corresponds to `p`'s
+  /// coordinates at same offset `i` in value returned by coords().
+  ///
+  /// If `e < 0`, then `n` is not filled but in boundary of hole, and `n`'s
+  /// *row-major* linear offset in image is `-e - 1`.  (Arrays and matrices
+  /// used in Eigen are by default column-major, and they are column-major in
+  /// present library, but pixel-data fed into function-object are assumed to
+  /// be row-major.)
+  ///
+  /// Otherwise, `n` is itself also filled (like `p`), and `n` has coordinates
+  /// at offset `e` in value returned by coords().
+  ///
+  /// \tparam I  Type of expression for array of row   -coordinates.
+  /// \tparam J  Type of expression for array of column-coordinates.
+  /// \param  r  Array of row   -coordinates for neighbor-pixel.
+  /// \param  c  Array of column-coordinates for neighbor-pixel.
+  /// \return    Expression-template for columnar array of code-values.
+  template<typename I, typename J> auto nVal(I const &r, J const &c) const {
+    auto nLinColMaj= r + c * hght_;
+    auto nLinRowMaj= c + r * wdth_;
+    auto a         = cmCol()(nLinColMaj);
+    auto b         = (a == -1).template cast<int>();
+    return b * (-1 - nLinRowMaj) + (1 - b) * a;
+  }
+
+  /// Expression-template for left neighbor via nVal().
+  auto nLft() const { return nVal(coords_.col(0), coords_.col(1) - 1); }
+
+  /// Expression-template for right neighbor via nVal().
+  /// \return  Expression-template for columnar array of code-values.
+  auto nRgt() const { return nVal(coords_.col(0), coords_.col(1) + 1); }
+
+  /// Expression-template for top neighbor via nVal().
+  /// \return  Expression-template for columnar array of code-values.
+  auto nTop() const { return nVal(coords_.col(0) - 1, coords_.col(1)); }
+
+  /// Expression-template for bottom neighbor via nVal().
+  /// \return  Expression-template for columnar array of code-values.
+  auto nBot() const { return nVal(coords_.col(0) + 1, coords_.col(1)); }
 
 public:
   /// Prepare to fill pixels given by `coords` in one or more single-component
@@ -122,61 +178,20 @@ public:
   ///
   ArrayXXi const &coordsMap() const { return coordsMap_; }
 
-  /// Expression-template for column containing value of left neighbor in
-  /// array returned by coordsMap().
+  /// Matrix with four columns and with each row corresponding to different
+  /// filled pixel, such that offset `rp` of row is offset in value returned by
+  /// coords() for filled pixel `p`; each column corresponds to neighbor `n`
+  /// (left, right, top, and bottom, respectively) of `p`; for
+  /// boundary-neighbor, element `e` encodes *row-major* linear offset `i` of
+  /// `n` in image as `-1 - i`; for filled neighbor, `e` contains offset `rn`
+  /// of coordinates of filled neighbor in value returned by coords().
   ///
-  /// Element `e` at offset `i` in returned column corresponds to filled
-  /// pixel's coordinates at same offset `i` in `coords`.  If `e = -1`, then
-  /// neighbor is on boundary of hole; otherwise, neighboring filled pixel has
-  /// coordinates at offset `e` in `coords`.
-  ///
-  /// \return  Column whose height is same as height of `coords`.
-  ///
-  auto nLft() const {
-    return cmCol()(coords_.col(0) + (coords_.col(1) - 1) * hght_);
-  }
+  /// \return  Matrix with four columns to encode information about each
+  ///          neighbor of each filled pixel.
+  ArrayX4i const &lrtb() const { return lrtb_; }
 
-  /// Expression-template for column containing value of right neighbor in
-  /// array returned by coordsMap().
-  ///
-  /// Element `e` at offset `i` in returned column corresponds to filled
-  /// pixel's coordinates at same offset `i` in `coords`.  If `e = -1`, then
-  /// neighbor is on boundary of hole; otherwise, neighboring filled pixel has
-  /// coordinates at offset `e` in `coords`.
-  ///
-  /// \return  Column whose height is same as height of `coords`.
-  ///
-  auto nRgt() const {
-    return cmCol()(coords_.col(0) + (coords_.col(1) + 1) * hght_);
-  }
-
-  /// Expression-template for column containing value of top neighbor in
-  /// array returned by coordsMap().
-  ///
-  /// Element `e` at offset `i` in returned column corresponds to filled
-  /// pixel's coordinates at same offset `i` in `coords`.  If `e = -1`, then
-  /// neighbor is on boundary of hole; otherwise, neighboring filled pixel has
-  /// coordinates at offset `e` in `coords`.
-  ///
-  /// \return  Column whose height is same as height of `coords`.
-  ///
-  auto nTop() const {
-    return cmCol()(coords_.col(0) - 1 + coords_.col(1) * hght_);
-  }
-
-  /// Expression-template for column containing value of bottom neighbor in
-  /// array returned by coordsMap().
-  ///
-  /// Element `e` at offset `i` in returned column corresponds to filled
-  /// pixel's coordinates at same offset `i` in `coords`.  If `e = -1`, then
-  /// neighbor is on boundary of hole; otherwise, neighboring filled pixel has
-  /// coordinates at offset `e` in `coords`.
-  ///
-  /// \return  Column whose height is same as height of `coords`.
-  ///
-  auto nBot() const {
-    return cmCol()(coords_.col(0) + 1 + coords_.col(1) * hght_);
-  }
+  /// Initialize square matrix for linear problem.
+  void initMatrix();
 };
 
 
@@ -190,14 +205,38 @@ public:
 namespace dirichlet {
 
 
+using Eigen::Triplet;
 using impl::coordsGood;
 using impl::initCoords;
+using std::vector;
+
+
+void Fill::initMatrix() {
+  vector<Triplet<float>> t;
+  // At *most* five coefficients in matrix for each filled pixel.  Fewer than
+  // five coefficients for each filled pixel that touches boundary of hole to
+  // fill.  Only one coefficient for each filled pixel that touches no other
+  // filled pixel (for filled pixel that touches only boundary-pixels).
+  t.reserve(coords_.size() * 5);
+  for(int i= 0; i < coords_.size(); ++i) {
+    t.push_back({i, i, 4.0f});
+  }
+}
 
 
 Fill::Fill(Coords const &coords, unsigned width, unsigned height):
-    coords_(coords), wdth_(width), hght_(height) {
+    coords_(coords),
+    wdth_(width),
+    hght_(height),
+    lrtb_(coords.rows(), 4),
+    A_(coords.rows(), coords.rows()),
+    b_(VectorXf::Zero(coords.rows())) {
   if(!coordsGood(coords, width, height)) return;
   coordsMap_= initCoords(coords, width, height);
+  lrtb_.col(0)= nLft();
+  lrtb_.col(1)= nRgt();
+  lrtb_.col(2)= nTop();
+  lrtb_.col(3)= nBot();
   // TBS
 }
 
