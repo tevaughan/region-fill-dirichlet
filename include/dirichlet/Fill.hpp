@@ -123,12 +123,12 @@ public:
   ///
   /// Values to fill with are later calculated according to Dirichlet-problem
   /// for filling pixels `P`, specified by `coords`, on basis of pixels `B` on
-  /// boundary of P.
+  /// boundary of `P`.
   ///
   /// Every pixel specified in `coords` must lie in interior of image; every
   /// pixel on edge of image can serve as boundary-condition but cannot be
-  /// filled.  If any pixel specified in `coords` be out of bounds, then no
-  /// solution is computed.
+  /// filled.  If any pixel specified in `coords` be on our outside of image's
+  /// edge, then no solution is computed.
   ///
   /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
@@ -143,10 +143,11 @@ public:
   /// for filling pixels `P`, non-zero in `mask`, on basis of pixels `B` on
   /// boundary of P.
   ///
-  /// Every pixel specified as non-zero in `mask` must lie in interior of
-  /// image; every pixel on edge of image can serve as boundary-condition but
-  /// cannot be filled.  If any pixel specified as non-zero in `mask` be out of
-  /// bounds, then no solution is computed.
+  /// Every pixel specified as non-zero in `mask` must lie in interior of image
+  /// in order to cause corresponding pixel in image to be filled; every pixel
+  /// on edge of image can serve as boundary-condition but cannot be filled.
+  /// If any pixel specified as non-zero in `mask` be on edge of image, then
+  /// that pixel is ignored (will not be filled).
   ///
   /// \tparam Comp    Type of each component of each pixel.
   ///
@@ -310,25 +311,20 @@ template<typename Comp>
 ArrayX2i Fill::findCoords(Comp *m, unsigned w, unsigned h, unsigned stride) {
   Comp const *mask= m;
   Comp const  zero(0);
-  ArrayX2i    coords(h * w, 2);
-  int         i= 0;
   // Walk the mask.
-  for(unsigned r= 0; r < h; ++r) {
-    for(unsigned c= 0; c < w; ++c) {
-      std::cout << "(" << c << "," << r << ")=" << *mask;
+  ArrayX2i coords(h * w, 2);
+  int      i= 0;
+  // Ignore every pixel on edge of image.
+  for(unsigned r= 1; r < h - 1; ++r) {
+    for(unsigned c= 1; c < w - 1; ++c) {
       if(*mask != zero) {
-        std::cout << " nonzero";
         coords.row(i)= Array2i{r, c};
         ++i;
       }
-      std::cout << std::endl;
       mask+= stride;
     }
   }
   coords.conservativeResize(i, 2);
-  std::cout << "coords.rows()=" << coords.rows() << " "
-            << "coords.cols()=" << coords.cols() << std::endl;
-  std::cout << "coords=\n" << coords << std::endl;
   return coords;
 }
 
