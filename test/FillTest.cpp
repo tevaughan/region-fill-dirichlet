@@ -216,6 +216,13 @@ TEST_CASE("Big image.", "[Fill]") {
   cout << "time to construct: " << t1.count() << " s" << endl;
   cout << "time to solve: " << t2.count() << " s" << endl;
 
+  start= std::chrono::steady_clock::now();
+  Fill const f2(f.coords(), cols, rows);
+  end= std::chrono::steady_clock::now();
+
+  std::chrono::duration<double> t3= end - start;
+  cout << "time to construct from coords: " << t3.count() << " s" << endl;
+
   gFile= fopen("gray-filled.pgm", "w");
   pgm_writepgm(gFile, image, cols, rows, max, 0);
   fclose(gFile);

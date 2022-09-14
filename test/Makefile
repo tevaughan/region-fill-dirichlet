@@ -1,7 +1,7 @@
 # Copyright 2022 Thomas E. Vaughan
 # See LICENSE for terms of distribution.
 
-CXXFLAGS:= -Wall -g
+CXXFLAGS:= -Wall -g -O3
 CPPFLAGS:= -I../include
 CC:= $(CXX)
 LDLIBS:= -lnetpbm -lCatch2Main -lCatch2
