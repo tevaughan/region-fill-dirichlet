@@ -5,7 +5,6 @@
 #ifndef DIRICHLET_FILL_HPP
 #define DIRICHLET_FILL_HPP
 
-#include "Coords.hpp"          // Coords, Eigen/Dense
 #include <eigen3/Eigen/Sparse> // SparseMatrix
 
 /// Namespace for code that solves Dirichlet-problem for zero-valued Laplacian
@@ -13,6 +12,7 @@
 namespace dirichlet {
 
 
+using Eigen::ArrayX2i; // coords
 using Eigen::ArrayX4i;
 using Eigen::ArrayXi;
 using Eigen::ArrayXXf;
@@ -27,16 +27,16 @@ using Eigen::VectorXf;
 /// across specified hole-pixels in image.
 ///
 /// Every pixel specified as to be filled must be in interior of image; no such
-/// pixel may be at edge of image.  See documentation for Coords.
+/// pixel may be at edge of image.
 ///
 /// Instantiating `%Fill` does all preparatory work necessary to enable quick
 /// filling of same coordinates in one or more images of same size.
 ///
 /// Filling image happens when instance is used as function-object.
 class Fill {
-  Coords const &coords_; ///< Coordinates of filled pixels in each image.
-  unsigned      wdth_;   ///< Number of columns in each image to fill.
-  unsigned      hght_;   ///< Number of rows    in each image to fill.
+  ArrayX2i coords_; ///< Coordinates of filled pixels in each image.
+  unsigned wdth_;   ///< Number of columns in each image to fill.
+  unsigned hght_;   ///< Number of rows    in each image to fill.
 
   /// Map from rectangular coordinates of filled pixel to offset of same
   /// coordinates in value returned by coords().  See documentation for
@@ -108,9 +108,18 @@ class Fill {
   /// \return  Expression-template for columnar array of code-values.
   auto nBot() const { return nVal(coords_.col(0) + 1, coords_.col(1)); }
 
+  /// Find non-zero coordinates in `mask`.
+  /// \tparam Comp    Type of each component in mask.
+  /// \param  mask    Pointer to mask.
+  /// \param  width   Width of mask.
+  /// \param  height  Height of mask.
+  template<typename Comp>
+  static ArrayX2i
+  findCoords(Comp *mask, unsigned width, unsigned height, unsigned stride);
+
 public:
-  /// Prepare to fill pixels given by `coords` in one or more single-component
-  /// images of size `width*height`.
+  /// Prepare for filling one or more single-component images of size
+  /// `width*height`; pixels to fill are given by `coords`.
   ///
   /// Values to fill with are later calculated according to Dirichlet-problem
   /// for filling pixels `P`, specified by `coords`, on basis of pixels `B` on
@@ -119,13 +128,39 @@ public:
   /// Every pixel specified in `coords` must lie in interior of image; every
   /// pixel on edge of image can serve as boundary-condition but cannot be
   /// filled.  If any pixel specified in `coords` be out of bounds, then no
-  /// solution is computed.  See documentation for Coords.
+  /// solution is computed.
   ///
   /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
   /// \param height  Number of rows in image.
   ///
-  Fill(Coords const &coords, unsigned width, unsigned height);
+  Fill(ArrayX2i const &coords, unsigned width, unsigned height);
+
+  /// Prepare for filling one or more single-component images of size
+  /// `width*height`; pixels to fill are given by non-zero pixels in `mask`.
+  ///
+  /// Values to fill with are later calculated according to Dirichlet-problem
+  /// for filling pixels `P`, non-zero in `mask`, on basis of pixels `B` on
+  /// boundary of P.
+  ///
+  /// Every pixel specified as non-zero in `mask` must lie in interior of
+  /// image; every pixel on edge of image can serve as boundary-condition but
+  /// cannot be filled.  If any pixel specified as non-zero in `mask` be out of
+  /// bounds, then no solution is computed.
+  ///
+  /// \tparam Comp    Type of each component of each pixel.
+  ///
+  /// \param  mask    Pointer to image whose non-zero pixels are to be filled
+  ///                 when same-sized image is provided later.
+  ///
+  /// \param  width   Number of columns in image.
+  /// \param  height  Number of rows in image.
+  ///
+  /// \param  stride  Number of instances of type Comp between component of one
+  ///                 pixel and corresponding component of next pixel.
+  ///
+  template<typename Comp>
+  Fill(Comp *mask, unsigned width, unsigned height, unsigned stride= 1);
 
   /// Deallocate Cholesky-decomposition.
   virtual ~Fill() {
@@ -134,7 +169,7 @@ public:
 
   /// Coordinates of each filled pixel.
   /// \return  Coordinates of each filled pixel.
-  Coords const &coords() const { return coords_; }
+  ArrayX2i const &coords() const { return coords_; }
 
   /// Fill pixels by calculating solution to linear system for one
   /// color-component of image.
@@ -151,8 +186,7 @@ public:
   /// image.
   ///
   /// Solution is empty if any specified coordinates be out of bounds.
-  /// (Coordinates on edge of image are out of bounds for filling.  See
-  /// documentation for Coords.)
+  /// (Coordinates on edge of image are out of bounds for filling.)
   ///
   /// \tparam Comp   Type of each component in image.
   ///
@@ -182,8 +216,7 @@ public:
   /// same coordinates in value returned by coords().
   ///
   /// Array is empty if any specified coordinates be out of bounds.
-  /// (Coordinates on edge of image are out of bounds for filling.  See
-  /// documentation for Coords.)
+  /// (Coordinates on edge of image are out of bounds for filling.)
   ///
   /// \return  Map from rectangular coordinates of filled pixel to offset of
   ///          same coordinates in value returned by coords().
@@ -219,6 +252,7 @@ namespace dirichlet {
 
 
 using Eigen::Array;
+using Eigen::Array2i;
 using Eigen::Dynamic;
 using Eigen::RowMajor;
 using Eigen::Triplet;
@@ -256,7 +290,7 @@ void Fill::initMatrix() {
 }
 
 
-Fill::Fill(Coords const &coords, unsigned width, unsigned height):
+Fill::Fill(ArrayX2i const &coords, unsigned width, unsigned height):
     coords_(coords),
     wdth_(width),
     hght_(height),
@@ -273,10 +307,42 @@ Fill::Fill(Coords const &coords, unsigned width, unsigned height):
 
 
 template<typename Comp>
+ArrayX2i Fill::findCoords(Comp *m, unsigned w, unsigned h, unsigned stride) {
+  Comp const *mask= m;
+  Comp const  zero(0);
+  ArrayX2i    coords(h * w, 2);
+  int         i= 0;
+  // Walk the mask.
+  for(unsigned r= 0; r < h; ++r) {
+    for(unsigned c= 0; c < w; ++c) {
+      std::cout << "(" << c << "," << r << ")=" << *mask;
+      if(*mask != zero) {
+        std::cout << " nonzero";
+        coords.row(i)= Array2i{r, c};
+        ++i;
+      }
+      std::cout << std::endl;
+      mask+= stride;
+    }
+  }
+  coords.conservativeResize(i, 2);
+  std::cout << "coords.rows()=" << coords.rows() << " "
+            << "coords.cols()=" << coords.cols() << std::endl;
+  std::cout << "coords=\n" << coords << std::endl;
+  return coords;
+}
+
+
+template<typename Comp>
+Fill::Fill(Comp *mask, unsigned width, unsigned height, unsigned stride):
+    Fill(findCoords(mask, width, height, stride), width, height) {}
+
+
+template<typename Comp>
 VectorXf Fill::operator()(Comp *image, unsigned stride) const {
   using Image = Array<Comp, Dynamic, 1>;
   using Stride= Eigen::Stride<1, Dynamic>;
-  using Map= Eigen::Map<Image, Unaligned, Stride>;
+  using Map   = Eigen::Map<Image, Unaligned, Stride>;
   Map im(image, hght_ * wdth_, 1, Stride(1, stride));
   // First, calculate 1 for encoded offset; 0 for filled pixel.
   auto const fL= (lrtb_.col(0) < 0);
@@ -296,7 +362,7 @@ VectorXf Fill::operator()(Comp *image, unsigned stride) const {
   // Now, pull pixel-data into b by evaluated vectorized expression.
   VectorXf const b= bL + bR + bT + bB;
   // Find answer.
-  VectorXf const x= A_->solve(b);
+  VectorXf const x          = A_->solve(b);
   constexpr bool is_const   = is_const_v<Comp>;
   constexpr bool is_integral= is_integral_v<Comp>;
   constexpr bool is_fp      = is_floating_point_v<Comp>;

@@ -5,12 +5,13 @@
 #ifndef DIRICHLET_IMPL_COORDS_GOOD_HPP
 #define DIRICHLET_IMPL_COORDS_GOOD_HPP
 
-#include "../Coords.hpp" // Coords and classes in Eigen/Dense
-#include <iostream>      // cerr, endl
+#include <eigen3/Eigen/Dense> // ArrayX2i
+#include <iostream>           // cerr, endl
 
 namespace dirichlet::impl {
 
 
+using Eigen::ArrayX2i;
 using std::cerr;
 using std::endl;
 
@@ -25,7 +26,8 @@ using std::endl;
 /// \param height  Number of rows    in image.
 /// \return        True only if coordinates all be in bounds.
 ///
-inline bool coordsGood(Coords const &coords, unsigned width, unsigned height) {
+inline bool
+coordsGood(ArrayX2i const &coords, unsigned width, unsigned height) {
   auto roob= (coords.col(0) <= 0) || (coords.col(0) >= height - 1);
   auto coob= (coords.col(1) <= 0) || (coords.col(1) >= width - 1);
   if((roob || coob).cast<int>().sum() > 0) {

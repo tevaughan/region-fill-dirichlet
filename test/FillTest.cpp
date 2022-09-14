@@ -7,9 +7,9 @@
 #include <iostream>                     // cout, endl
 
 
-using dirichlet::Coords;
 using dirichlet::Fill;
 using Eigen::Array2i;
+using Eigen::ArrayX2i;
 using std::cout;
 using std::endl;
 
@@ -38,7 +38,7 @@ unsigned height2= 7;
 
 TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
   cout << "starting constructor-test" << endl;
-  Coords coords(3);
+  ArrayX2i coords(3, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(2, 1);
   coords.row(2)= Array2i(3, 2);
@@ -84,15 +84,36 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
 }
 
 
+TEST_CASE("Constructor from mask produces right coordinates-map.", "[Fill]") {
+  cout << "starting constructor-from-mask test" << endl;
+  uint8_t  mask1[]= {0, 0, 0, 0, //
+                     0, 1, 0, 0, //
+                     0, 1, 0, 0, //
+                     0, 0, 1, 0, //
+                     0, 0, 0, 0};
+  ArrayX2i coords(3, 2);
+  coords.row(0)= Array2i(1, 1);
+  coords.row(1)= Array2i(2, 1);
+  coords.row(2)= Array2i(3, 2);
+  Fill const f(mask1, width1, height1);
+  cout << "f.coords():\n" << f.coords() << endl;
+  REQUIRE(f.coords().rows() == 3);
+  REQUIRE(f.coords()(0) == coords(0));
+  REQUIRE(f.coords()(1) == coords(1));
+  REQUIRE(f.coords()(2) == coords(2));
+  cout << "done with constructor-from-mask test" << endl;
+}
+
+
 TEST_CASE("Function works as expected.", "[Fill]") {
   cout << "starting function-test" << endl;
-  Coords coords(20);
-  int    image[42];
-  int    i= 0;
+  ArrayX2i coords(20, 2);
+  int      image[42];
+  int      i= 0;
   cout << "image (before):" << endl;
   for(unsigned r= 0; r < height2; ++r) {
     for(unsigned c= 0; c < width2; ++c) {
-      int const v= rand() % 10;
+      int const v          = rand() % 10;
       image[r * width2 + c]= v;
       cout << v << " ";
     }
@@ -113,11 +134,12 @@ TEST_CASE("Function works as expected.", "[Fill]") {
     cout << endl;
   }
   cout << "done with function-test" << endl;
+  // FIXME: Call REQUIRE() on something.
 }
 
 
 TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
-  Coords coords(2);
+  ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(4, 1); // pixel oob on bottom edge
   Fill const f(coords, width1, height1);
@@ -127,7 +149,7 @@ TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
-  Coords coords(2);
+  ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(-1, 1); // pixel oob left of left edge
   Fill const f(coords, width1, height1);
@@ -137,7 +159,7 @@ TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
-  Coords coords(2);
+  ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, 3); // pixel oob on right edge
   Fill const f(coords, width1, height1);
@@ -147,7 +169,7 @@ TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
 
 
 TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
-  Coords coords(2);
+  ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, -1); // pixel oob above top edge
   Fill const f(coords, width1, height1);
