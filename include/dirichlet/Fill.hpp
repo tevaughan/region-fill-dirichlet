@@ -269,21 +269,27 @@ Fill::Fill(Coords const &coords, unsigned width, unsigned height):
 
 template<typename Comp>
 VectorXf Fill::operator()(Comp *image, unsigned stride) const {
-  using Image = Array<Comp, Dynamic, Dynamic, RowMajor>;
+  using Image = Array<Comp, Dynamic, 1>;
   using Stride= Eigen::Stride<1, Dynamic>;
-  Map<Image, Unaligned, Stride> im(image, hght_, wdth_, Stride(1, stride));
+  using Map= Eigen::Map<Image, Unaligned, Stride>;
+  Map im(image, hght_ * wdth_, 1, Stride(1, stride));
   // First, calculate 1 for encoded offset; 0 for filled pixel.
-  auto const fL= (lrtb_.col(0) < 0).cast<int>();
-  auto const fR= (lrtb_.col(1) < 0).cast<int>();
-  auto const fT= (lrtb_.col(2) < 0).cast<int>();
-  auto const fB= (lrtb_.col(3) < 0).cast<int>();
+  auto const fL= (lrtb_.col(0) < 0);
+  auto const fR= (lrtb_.col(1) < 0);
+  auto const fT= (lrtb_.col(2) < 0);
+  auto const fB= (lrtb_.col(3) < 0);
   // Next, clamp offsets at zero on the low end.
-  auto const iL= fL * (-lrtb_.col(0) - 1);
-  auto const iR= fR * (-lrtb_.col(1) - 1);
-  auto const iT= fT * (-lrtb_.col(2) - 1);
-  auto const iB= fB * (-lrtb_.col(3) - 1);
+  auto const iL= fL.cast<int>() * (-lrtb_.col(0) - 1);
+  auto const iR= fR.cast<int>() * (-lrtb_.col(1) - 1);
+  auto const iT= fT.cast<int>() * (-lrtb_.col(2) - 1);
+  auto const iB= fB.cast<int>() * (-lrtb_.col(3) - 1);
+  // Next, calculate values.
+  auto const bL= fL.cast<float>() * im(iL).template cast<float>();
+  auto const bR= fR.cast<float>() * im(iR).template cast<float>();
+  auto const bT= fT.cast<float>() * im(iT).template cast<float>();
+  auto const bB= fB.cast<float>() * im(iB).template cast<float>();
   // Now pull pixel-data into b.
-  auto const b= fL * im(iL) + fR * im(iR) + fT * im(iT) + fB * im(iB);
+  VectorXf const b= bL + bR + bT + bB;
   return A_->solve(b);
 }
 

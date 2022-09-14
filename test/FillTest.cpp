@@ -24,7 +24,20 @@ unsigned width1 = 4;
 unsigned height1= 5;
 
 
+uint8_t image2[]= {0,  1,  2,  3,  4,  5,  //
+                   6,  7,  8,  9,  10, 11, //
+                   12, 13, 14, 15, 16, 17, //
+                   18, 19, 20, 21, 22, 23, //
+                   24, 25, 26, 27, 28, 29, //
+                   30, 31, 32, 33, 34, 35, //
+                   36, 37, 38, 39, 40, 41};
+
+unsigned width2 = 6;
+unsigned height2= 7;
+
+
 TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
+  cout << "starting constructor-test" << endl;
   Coords coords(3);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(2, 1);
@@ -67,6 +80,35 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
   REQUIRE(nBot(0) == 1);
   REQUIRE(nBot(1) == -13 - 1);
   REQUIRE(nBot(2) == -18 - 1);
+  cout << "done with constructor-test" << endl;
+}
+
+
+TEST_CASE("Function works as expected.", "[Fill]") {
+  cout << "starting function-test" << endl;
+  Coords coords(20);
+  float  image[42];
+  int    i= 0;
+  cout << "image:" << endl;
+  for(unsigned r= 0; r < height2; ++r) {
+    for(unsigned c= 0; c < width2; ++c) {
+      float const v= rand() % 10;
+      image[r * width2 + c]= v;
+      cout << v << " ";
+    }
+    cout << endl;
+  }
+  for(unsigned r= 1; r < height2 - 1; ++r) {
+    for(unsigned c= 1; c < width2 - 1; ++c) {
+      cout << "inserting coords: " << i << ": " << r << " " << c << endl;
+      coords.row(i++)      = Array2i(r, c);
+    }
+  }
+  Fill const f(coords, width2, height2);
+  cout << "coordsMap:\n" << f.coordsMap() << endl;
+  auto const x= f(image);
+  cout << "x:\n" << x << endl;
+  cout << "done with function-test" << endl;
 }
 
 
