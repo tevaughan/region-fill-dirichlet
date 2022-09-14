@@ -309,14 +309,17 @@ Fill::Fill(ArrayX2i const &coords, unsigned width, unsigned height):
 
 template<typename Comp>
 ArrayX2i Fill::findCoords(Comp *m, unsigned w, unsigned h, unsigned stride) {
-  Comp const *mask= m;
-  Comp const  zero(0);
-  // Walk the mask.
-  ArrayX2i coords(h * w, 2);
-  int      i= 0;
+  Comp const zero(0);
+  // Width (pixels) of edge.
+  constexpr unsigned ew= 1;
   // Ignore every pixel on edge of image.
-  for(unsigned r= 1; r < h - 1; ++r) {
-    for(unsigned c= 1; c < w - 1; ++c) {
+  if(h <= 2 * ew || w <= 2 * ew) return ArrayX2i();
+  ArrayX2i coords((h - 2 * ew) * (w - 2 * ew), 2);
+  // Walk the mask.
+  int i= 0;
+  for(unsigned r= ew; r < h - ew; ++r) {
+    Comp const *mask= m + (r * w + ew) * stride;
+    for(unsigned c= ew; c < w - ew; ++c) {
       if(*mask != zero) {
         coords.row(i)= Array2i{r, c};
         ++i;
