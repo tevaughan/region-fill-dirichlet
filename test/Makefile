@@ -4,7 +4,7 @@
 CXXFLAGS:= -Wall -g
 CPPFLAGS:= -I../include
 CC:= $(CXX)
-LDLIBS:= -lCatch2Main -lCatch2
+LDLIBS:= -lnetpbm -lCatch2Main -lCatch2
 
 .PHONY: all clean
 

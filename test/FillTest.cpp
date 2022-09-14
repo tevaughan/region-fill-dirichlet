@@ -4,7 +4,9 @@
 
 #include "dirichlet/Fill.hpp"           // Fill
 #include <catch2/catch_test_macros.hpp> // TEST_CASE
+#include <chrono>                       // steady_clock
 #include <iostream>                     // cout, endl
+#include <netpbm/pgm.h>                 // pgm_readpgm()
 
 
 using dirichlet::Fill;
@@ -175,6 +177,48 @@ TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
   Fill const f(coords, width1, height1);
   REQUIRE(f.coordsMap().rows() == 0);
   REQUIRE(f.coordsMap().cols() == 0);
+}
+
+
+TEST_CASE("Big image.", "[Fill]") {
+  FILE  *gFile= fopen("gray.pgm", "r");
+  int    cols, rows;
+  gray   max;
+  gray **image= pgm_readpgm(gFile, &cols, &rows, &max);
+  fclose(gFile);
+  int const size= cols * rows;
+  int const rcen= rows / 2;
+  int const ccen= cols / 2;
+  int const rpix= 100;
+  int const r2  = rpix * rpix;
+  gray     *mask= new gray[size];
+  for(int r= 0; r < rows; ++r) {
+    int const dr  = r - rcen;
+    int const roff= r * cols;
+    for(int c= 0; c < cols; ++c) {
+      int const dc  = c - ccen;
+      int const poff= roff + c;
+      if(dr * dr + dc * dc < r2) {
+        mask[poff]= 1;
+      } else {
+        mask[poff]= 0;
+      }
+    }
+  }
+  auto start= std::chrono::steady_clock::now();
+  Fill const f(mask, cols, rows);
+  auto way1= std::chrono::steady_clock::now();
+  f(*image);
+  auto end= std::chrono::steady_clock::now();
+
+  std::chrono::duration<double> t1= way1 - start;
+  std::chrono::duration<double> t2= end - way1;
+  cout << "time to construct: " << t1.count() << " s" << endl;
+  cout << "time to solve: " << t2.count() << " s" << endl;
+
+  gFile= fopen("gray-filled.pgm", "w");
+  pgm_writepgm(gFile, image, cols, rows, max, 0);
+  fclose(gFile);
 }
 
 
