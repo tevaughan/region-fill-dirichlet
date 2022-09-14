@@ -198,7 +198,7 @@ TEST_CASE("Big image.", "[Fill]") {
     for(int c= 0; c < cols; ++c) {
       int const dc  = c - ccen;
       int const poff= roff + c;
-      if(dr * dr + dc * dc < r2) {
+      if(dr * dr + dc * dc < r2 || (c > 1300 && c < 1305)) {
         mask[poff]= 1;
       } else {
         mask[poff]= 0;
