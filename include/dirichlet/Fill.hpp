@@ -225,6 +225,11 @@ using Eigen::Triplet;
 using Eigen::Unaligned;
 using impl::coordsGood;
 using impl::initCoords;
+using std::is_const_v;
+using std::is_floating_point_v;
+using std::is_integral_v;
+using std::is_same_v;
+using std::is_unsigned_v;
 using std::vector;
 
 
@@ -288,9 +293,35 @@ VectorXf Fill::operator()(Comp *image, unsigned stride) const {
   auto const bR= fR.cast<float>() * im(iR).template cast<float>();
   auto const bT= fT.cast<float>() * im(iT).template cast<float>();
   auto const bB= fB.cast<float>() * im(iB).template cast<float>();
-  // Now pull pixel-data into b.
+  // Now, pull pixel-data into b by evaluated vectorized expression.
   VectorXf const b= bL + bR + bT + bB;
-  return A_->solve(b);
+  // Find answer.
+  VectorXf const x= A_->solve(b);
+  constexpr bool is_const   = is_const_v<Comp>;
+  constexpr bool is_integral= is_integral_v<Comp>;
+  constexpr bool is_fp      = is_floating_point_v<Comp>;
+  if constexpr(!is_const && (is_integral || is_fp)) {
+    // Image is row-major.
+    auto const ii= /*col*/ coords_.col(0) * wdth_ + /*row*/ coords_.col(1);
+    if constexpr(is_integral) {
+      if constexpr(is_unsigned_v<Comp>) {
+        im(ii)= (x.array() + 0.5f).cast<Comp>();
+      } else {
+        auto const neg= (x.array() < 0.0f).cast<Comp>();
+        auto const rup= (x.array() + 0.5f).cast<Comp>();
+        auto const rdn= (x.array() - 0.5f).cast<Comp>();
+        // Round in correct direction.
+        im(ii)= neg * rdn + (Comp(1) - neg) * rup;
+      }
+    } else {
+      if constexpr(is_same_v<float, Comp>) {
+        im(ii)= x.array();
+      } else {
+        im(ii)= x.array().cast<Comp>();
+      }
+    }
+  }
+  return x;
 }
 
 

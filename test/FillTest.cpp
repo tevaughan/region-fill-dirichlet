@@ -87,12 +87,12 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
 TEST_CASE("Function works as expected.", "[Fill]") {
   cout << "starting function-test" << endl;
   Coords coords(20);
-  float  image[42];
+  int    image[42];
   int    i= 0;
-  cout << "image:" << endl;
+  cout << "image (before):" << endl;
   for(unsigned r= 0; r < height2; ++r) {
     for(unsigned c= 0; c < width2; ++c) {
-      float const v= rand() % 10;
+      int const v= rand() % 10;
       image[r * width2 + c]= v;
       cout << v << " ";
     }
@@ -101,13 +101,17 @@ TEST_CASE("Function works as expected.", "[Fill]") {
   for(unsigned r= 1; r < height2 - 1; ++r) {
     for(unsigned c= 1; c < width2 - 1; ++c) {
       cout << "inserting coords: " << i << ": " << r << " " << c << endl;
-      coords.row(i++)      = Array2i(r, c);
+      coords.row(i++)= Array2i(r, c);
     }
   }
   Fill const f(coords, width2, height2);
   cout << "coordsMap:\n" << f.coordsMap() << endl;
   auto const x= f(image);
-  cout << "x:\n" << x << endl;
+  cout << "image (after):" << endl;
+  for(unsigned r= 0; r < height2; ++r) {
+    for(unsigned c= 0; c < width2; ++c) cout << image[r * width2 + c] << " ";
+    cout << endl;
+  }
   cout << "done with function-test" << endl;
 }
 
