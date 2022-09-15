@@ -38,7 +38,7 @@ Here are some images from my work:
 
 ## Redesign Under Namespace `dirichlet`
 
-Redesigned code require at least
+Redesigned code requires at least
 - Eigen-3.4
 - Catch2-3.0 (for unit-tests)
 
