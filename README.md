@@ -36,7 +36,7 @@ Here are some images from my work:
 ![trees-mod3.png](doc/trees-mod3.png)
 ![trees-mod3-cut.png](doc/trees-mod3-cut.png)
 
-## Redesign Under Namespace `dirichlet`
+## Redesign Under Namespace `dfill`
 
 Redesigned code requires at least
 - Eigen-3.4
