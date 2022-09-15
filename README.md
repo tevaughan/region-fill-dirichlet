@@ -44,21 +44,23 @@ Redesigned code requires at least
 
 After initial design and implementation as code
 under namespace `regfill`, improved design and
-implementation is under namespace `dirichlet`.
+implementation is under namespace `dfill`.
 
-Design under `dirichlet` internally uses Eigen
-throughly (no for-loops!), minimizes copying,
+Design under `dfill` internally uses Eigen
+throughly (almost no for-loops now), minimizes copying,
 and does not use `std::map`.
 
 The basic idea is to employ an interface
-enabling speed and flexibility.  Constructor for
-[`dirichlet::Fill`](Fill.hpp) will do very
-little copying: It will copy the solution back
+enabling speed and flexibility.  The Constructor
+for [`dfill::Fill`](include/dfill/Fill.hpp)
+and the constructed function-object will do very
+little copying. The function that solves the
+Dirichlet-problem will copy the solution back
 into the original image only if that image be
 passed to constructor by way of non-const
-pointer.  Otherwise, the solution, only for the
-specified pixels, may be read from the instance
-after construction.
+pointer.  Anyway, the solution, only for the
+specified pixels, is returned by the
+function-object.
 
 Copyright 2018-2022 Thomas E. Vaughan.  See
 terms of redistribution in [LICENSE](LICENSE).
