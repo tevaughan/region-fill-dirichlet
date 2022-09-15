@@ -36,7 +36,7 @@ Here are some images from my work:
 ![trees-mod3.png](doc/trees-mod3.png)
 ![trees-mod3-cut.png](doc/trees-mod3-cut.png)
 
-## Redesign Under Namespace `dfill`
+## Redesign Under Namespace `dirichlet`
 
 Redesigned code requires at least
 - Eigen-3.4
@@ -44,15 +44,16 @@ Redesigned code requires at least
 
 After initial design and implementation as code
 under namespace `regfill`, improved design and
-implementation is under namespace `dfill`.
+implementation is under namespace `dirichlet`.
 
-Design under `dfill` internally uses Eigen
-throughly (almost no for-loops now), minimizes copying,
-and does not use `std::map`.
+Design under `dirichlet` internally uses Eigen
+throughly (almost no for-loops now), minimizes
+copying, and does not use `std::map`.
 
 The basic idea is to employ an interface
 enabling speed and flexibility.  The Constructor
-for [`dfill::Fill`](include/dfill/Fill.hpp)
+for
+[`dirichlet::Fill`](include/dirichlet/Fill.hpp)
 and the constructed function-object will do very
 little copying. The function that solves the
 Dirichlet-problem will copy the solution back
