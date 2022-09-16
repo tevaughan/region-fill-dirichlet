@@ -21,7 +21,7 @@ design did for building coefficients for
 sparse matrix.
 
 The basic idea is to employ an interface
-enabling speed and flexibility.  The Constructor
+enabling speed and flexibility.  The constructor
 for
 [`dirichlet::Fill`](include/dirichlet/Fill.hpp)
 and the constructed function-object will do very
