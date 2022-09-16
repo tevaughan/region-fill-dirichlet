@@ -1,10 +1,10 @@
 # Copyright 2022 Thomas E. Vaughan
 # See LICENSE for terms of distribution.
 
-CXXFLAGS:= -Wall -g -O3
-CPPFLAGS:= -I../include
 CC:= $(CXX)
-LDLIBS:= -lnetpbm -lCatch2Main -lCatch2
+CXXFLAGS:= -Wall -g -O3 -std=c++17
+CPPFLAGS:= -I../include
+LDLIBS:= -lCatch2Main -lCatch2
 
 .PHONY: all clean
 

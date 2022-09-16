@@ -5,15 +5,24 @@
 #include "dirichlet/Fill.hpp"           // Fill
 #include <catch2/catch_test_macros.hpp> // TEST_CASE
 #include <chrono>                       // steady_clock
+#include <fstream>                      // ifstream, ofstream
 #include <iostream>                     // cout, endl
-#include <netpbm/pgm.h>                 // pgm_readpgm()
-
 
 using dirichlet::Fill;
+using Eigen::Array;
 using Eigen::Array2i;
 using Eigen::ArrayX2i;
+using Eigen::ArrayXi;
+using Eigen::ArrayXXi;
+using Eigen::Dynamic;
+using Eigen::RowMajor;
 using std::cout;
 using std::endl;
+using std::ifstream;
+using std::istream;
+using std::min_element;
+using std::ofstream;
+using std::string;
 
 
 uint8_t image1[]= {0,  1,  2,  3,  //
@@ -89,10 +98,10 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
 TEST_CASE("Constructor from mask produces right coordinates-map.", "[Fill]") {
   cout << "starting constructor-from-mask test" << endl;
   uint8_t  mask1[]= {0, 0, 0, 0, //
-                     0, 1, 0, 0, //
-                     0, 1, 0, 0, //
-                     0, 0, 1, 0, //
-                     0, 0, 0, 0};
+                    0, 1, 0, 0, //
+                    0, 1, 0, 0, //
+                    0, 0, 1, 0, //
+                    0, 0, 0, 0};
   ArrayX2i coords(3, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(2, 1);
@@ -145,8 +154,7 @@ TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(4, 1); // pixel oob on bottom edge
   Fill const f(coords, width1, height1);
-  REQUIRE(f.coordsMap().rows() == 0);
-  REQUIRE(f.coordsMap().cols() == 0);
+  REQUIRE(f.coords().rows() == 1);
 }
 
 
@@ -155,8 +163,7 @@ TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(-1, 1); // pixel oob left of left edge
   Fill const f(coords, width1, height1);
-  REQUIRE(f.coordsMap().rows() == 0);
-  REQUIRE(f.coordsMap().cols() == 0);
+  REQUIRE(f.coords().rows() == 1);
 }
 
 
@@ -165,8 +172,7 @@ TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, 3); // pixel oob on right edge
   Fill const f(coords, width1, height1);
-  REQUIRE(f.coordsMap().rows() == 0);
-  REQUIRE(f.coordsMap().cols() == 0);
+  REQUIRE(f.coords().rows() == 1);
 }
 
 
@@ -175,40 +181,95 @@ TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, -1); // pixel oob above top edge
   Fill const f(coords, width1, height1);
-  REQUIRE(f.coordsMap().rows() == 0);
-  REQUIRE(f.coordsMap().cols() == 0);
+  REQUIRE(f.coords().rows() == 1);
+}
+
+
+struct PgmHeader {
+  string magic;
+  int    width;
+  int    height;
+  int    maxval;
+
+  PgmHeader(istream &is) {
+    if(!(is >> magic)) throw "PgmHeader: reading magic";
+    if(magic != "P5") throw "PgmHeader: bad magic";
+    if(!(is >> width)) throw "PgmHeader: reading width";
+    if(!(is >> height)) throw "PgmHeader: reading height";
+    if(!(is >> maxval)) throw "PgmHeader: reading maxval";
+  }
+
+  int numPix() const { return width * height; }
+};
+
+
+using Image= Array<int, Dynamic, Dynamic, RowMajor>;
+
+
+Image readPgm(char const *f) {
+  ifstream        ifs(f);
+  PgmHeader const pgmHeader(ifs);
+  ArrayXXi        img(pgmHeader.height, pgmHeader.width);
+  int             n     = pgmHeader.numPix();
+  int             i     = 0;
+  bool            inData= false;
+  while(i < n && ifs) {
+    int const v= ifs.get();
+    if(inData == false && (v == ' ' || v == '\t' || v == '\n')) continue;
+    inData     = true;
+    int const r= i / pgmHeader.width;
+    int const c= i % pgmHeader.width;
+    img(r, c)  = v;
+    ++i;
+  }
+  return img;
+}
+
+
+/// Try to draw circle of radius `radiusPix` pixels at center of image that is
+/// same size as `image`, and also draw thin, vertical line at center.
+Image drawMask(Image const &image, int radiusPix= 100, int w= 10) {
+  int const rcen  = image.rows() / 2;
+  int const ccen  = image.cols() / 2;
+  int const rads[]= {radiusPix, int(image.rows()), int(image.cols())};
+  int const rpix  = *min_element(rads, rads + 3);
+  int const r2    = rpix * rpix;
+  ArrayXXi  col(1, image.cols());
+  ArrayXXi  row(image.rows(), 1);
+  col.row(0)       = ArrayXi::LinSpaced(image.cols(), 0, image.cols() - 1);
+  row.col(0)       = ArrayXi::LinSpaced(image.rows(), 0, image.rows() - 1);
+  ArrayXXi cols    = col.replicate(image.rows(), 1);
+  ArrayXXi rows    = row.replicate(1, image.cols());
+  ArrayXXi dr      = rows - rcen;
+  ArrayXXi dc      = cols - ccen;
+  ArrayXXi inCircle= (dr * dr + dc * dc < r2).cast<int>();
+  ArrayXXi inLine= (cols >= ccen - w / 2 && cols <= ccen + w / 2).cast<int>();
+  return inCircle + inLine;
+}
+
+
+void writePgm(char const *f, Image const &image) {
+  ofstream ofs(f);
+  if(!(ofs << "P5\n")) throw "writePgm: magic";
+  if(!(ofs << image.cols() << " " << image.rows() << "\n")) {
+    throw "writePgm::size";
+  }
+  if(!(ofs << image.maxCoeff() << "\n")) throw "writePgm: maxval";
+  for(int r= 0; r < image.rows(); ++r) {
+    for(int c= 0; c < image.cols(); ++c) ofs.put(image(r, c));
+  }
 }
 
 
 TEST_CASE("Big image.", "[Fill]") {
-  FILE  *gFile= fopen("gray.pgm", "r");
-  int    cols, rows;
-  gray   max;
-  gray **image= pgm_readpgm(gFile, &cols, &rows, &max);
-  fclose(gFile);
-  int const size= cols * rows;
-  int const rcen= rows / 2;
-  int const ccen= cols / 2;
-  int const rpix= 100;
-  int const r2  = rpix * rpix;
-  gray     *mask= new gray[size];
-  for(int r= 0; r < rows; ++r) {
-    int const dr  = r - rcen;
-    int const roff= r * cols;
-    for(int c= 0; c < cols; ++c) {
-      int const dc  = c - ccen;
-      int const poff= roff + c;
-      if(dr * dr + dc * dc < r2 || (c > 1300 && c < 1305)) {
-        mask[poff]= 1;
-      } else {
-        mask[poff]= 0;
-      }
-    }
-  }
-  auto start= std::chrono::steady_clock::now();
-  Fill const f(mask, cols, rows);
-  auto way1= std::chrono::steady_clock::now();
-  f(*image);
+  Image       image= readPgm("gray.pgm"); // non-const for write-back by f()
+  Image const mask = drawMask(image);
+  writePgm("mask.pgm", mask);
+
+  auto       start= std::chrono::steady_clock::now();
+  Fill const f(&mask(0, 0), image.cols(), image.rows());
+  auto       way1= std::chrono::steady_clock::now();
+  f(&image(0, 0));
   auto end= std::chrono::steady_clock::now();
 
   std::chrono::duration<double> t1= way1 - start;
@@ -217,15 +278,13 @@ TEST_CASE("Big image.", "[Fill]") {
   cout << "time to solve: " << t2.count() << " s" << endl;
 
   start= std::chrono::steady_clock::now();
-  Fill const f2(f.coords(), cols, rows);
+  Fill const f2(f.coords(), image.cols(), image.rows());
   end= std::chrono::steady_clock::now();
 
   std::chrono::duration<double> t3= end - start;
   cout << "time to construct from coords: " << t3.count() << " s" << endl;
 
-  gFile= fopen("gray-filled.pgm", "w");
-  pgm_writepgm(gFile, image, cols, rows, max, 0);
-  fclose(gFile);
+  writePgm("gray-filled.pgm", image);
 }
 
 

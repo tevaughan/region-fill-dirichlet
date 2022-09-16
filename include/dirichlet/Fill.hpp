@@ -117,6 +117,13 @@ class Fill {
   static ArrayX2i
   findCoords(Comp *mask, unsigned width, unsigned height, unsigned stride);
 
+  /// Initialize square matrix for linear problem.
+  void initMatrix();
+
+  /// Initialize coords_ (which pixels to fill), and initialize coordsMap_.
+  /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
+  void initCoords(ArrayX2i const &coords);
+
 public:
   /// Prepare for filling one or more single-component images of size
   /// `width*height`; pixels to fill are given by `coords`.
@@ -125,10 +132,11 @@ public:
   /// for filling pixels `P`, specified by `coords`, on basis of pixels `B` on
   /// boundary of `P`.
   ///
-  /// Every pixel specified in `coords` must lie in interior of image; every
-  /// pixel on edge of image can serve as boundary-condition but cannot be
-  /// filled.  If any pixel specified in `coords` be on our outside of image's
-  /// edge, then no solution is computed.
+  /// Every pixel specified in `coords` must lie in interior of image in order
+  /// to indicate a pixel that should be filled; every pixel on edge of image
+  /// can serve as boundary-condition but cannot be filled.  If any pixel
+  /// specified in `coords` be on our outside of image's edge, then that pixel
+  /// is ignored; no corresponding pixel in image will be filled.
   ///
   /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
@@ -236,18 +244,12 @@ public:
   /// \return  Matrix with four columns to encode information about each
   ///          neighbor of each filled pixel.
   ArrayX4i const &lrtb() const { return lrtb_; }
-
-  /// Initialize square matrix for linear problem.
-  void initMatrix();
 };
 
 
 } // namespace dirichlet
 
 // Implementation below.
-
-#include "impl/coordsGood.hpp" // coordsGood()
-#include "impl/initCoords.hpp" // initCoords()
 
 namespace dirichlet {
 
@@ -258,8 +260,6 @@ using Eigen::Dynamic;
 using Eigen::RowMajor;
 using Eigen::Triplet;
 using Eigen::Unaligned;
-using impl::coordsGood;
-using impl::initCoords;
 using std::is_const_v;
 using std::is_floating_point_v;
 using std::is_integral_v;
@@ -291,18 +291,45 @@ void Fill::initMatrix() {
 }
 
 
+void Fill::initCoords(ArrayX2i const &coords) {
+  // First build coords_ by excluding illegal pixels.
+  constexpr int b   = 1; // Width (pixels) of illegal border.
+  int const     rmin= b;
+  int const     cmin= b;
+  int const     rmax= hght_ - 1 - b;
+  int const     cmax= wdth_ - 1 - b;
+  int           j   = 0;
+  for(unsigned i= 0; i < coords.rows(); ++i) {
+    int const r= coords.row(i)[0];
+    int const c= coords.row(i)[1];
+    if(r < rmin || c < cmin || r > rmax || c > cmax) continue;
+    coords_.row(j)[0]= r;
+    coords_.row(j)[1]= c;
+    ++j;
+  }
+  coords_.conservativeResize(j, 2);
+  // Second, build coordsMap_.
+  ArrayXXi     cmap= ArrayXXi::Constant(hght_, wdth_, -1);
+  auto const   lin = coords_.col(0) + coords_.col(1) * hght_;
+  Map<ArrayXi> m(&cmap(0, 0), hght_ * wdth_, 1);
+  m(lin)    = ArrayXi::LinSpaced(coords_.rows(), 0, coords_.rows() - 1);
+  coordsMap_= cmap;
+}
+
+
 Fill::Fill(ArrayX2i const &coords, unsigned width, unsigned height):
-    coords_(coords),
+    coords_(coords.rows(), coords.cols()),
     wdth_(width),
     hght_(height),
     lrtb_(coords.rows(), 4),
     a_(coords.rows(), coords.rows()) {
-  if(!coordsGood(coords, width, height)) return;
-  coordsMap_  = initCoords(coords, width, height);
+  initCoords(coords); // Side effect is change of coords_.rows().
+  lrtb_.conservativeResize(coords_.rows(), 4);
   lrtb_.col(0)= nLft();
   lrtb_.col(1)= nRgt();
   lrtb_.col(2)= nTop();
   lrtb_.col(3)= nBot();
+  a_.conservativeResize(coords_.rows(), coords_.rows());
   initMatrix();
 }
 
