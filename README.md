@@ -40,9 +40,9 @@ Here are a mask, the original image, and the
 correspdonding, filled image produced by
 implementation of new design:
 
-![gray.pgm](test/gray.pgm)
-![mask.pgm](test/mask.pgm)
-![gray-filled.pgm](test/gray-filled.pgm)
+![gray.png](test/gray.png)
+![mask.png](test/mask.png)
+![gray-filled.png](test/gray-filled.png)
 
 ## Old Design Under Namespace `regfill`
 
