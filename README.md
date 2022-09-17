@@ -36,13 +36,15 @@ function-object.
 Speed with `-O3` is much faster than that of
 old design with `-O3`.
 
-Here are a mask, the original image, and the
-correspdonding, filled image produced by
-implementation of new design:
+Here are the original image, the mask, the
+filled image produced by implementation of new
+design, and a histogram-equalized image zoomed
+in on the central, filled circle:
 
 ![gray.png](test/gray.png)
 ![mask.png](test/mask.png)
 ![gray-filled.png](test/gray-filled.png)
+![gray-filled-zoom-eq.png](test/gray-filled-zoom-eq.png)
 
 ## Idea for Even Faster Performance
 
