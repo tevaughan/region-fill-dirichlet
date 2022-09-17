@@ -44,6 +44,51 @@ implementation of new design:
 ![mask.png](test/mask.png)
 ![gray-filled.png](test/gray-filled.png)
 
+## Idea for Even Faster Performance
+
+In a large, filled region, the gradient of the
+pixel-values is very smooth in the vicinity of
+every filled pixel that is farther than a
+handfull of pixels from the border of the filled
+region.  This suggests a triangle-based approach
+because a triangle allows for natural, linear
+interpolation of a scalar field defined at its
+vertices.
+
+First, consider every successive, binned image
+of the original image.  First 2x2, then 4x4,
+then 8x8, etc.  In each case, the superpixel in
+the binned image contains the mean of the
+pixel-values in the image at the next higher
+stage of resolution.
+
+Then, for any given region, begin with the
+binning level at which at least one superpixel
+fits entirely within the region to be filled.
+Save the coordinates of the corners of each such
+superpixel.
+
+Then advance to the next higher resolution, and
+find all of the superpixels outside those
+already found but completely within the region
+to be filled.  Save the coordinates of each such
+superpixel.
+
+At the last stage in this process, the corners
+of the highest-resolution pixels are saved.
+
+After all of the pixel-corners are saved,
+perform a Delaunay triangulation, and solve the
+Dirichlet problem on the triangles.  This will
+be much faster than solving for the full
+pixel-grid because the number of solution-points
+(corner-points) will be much smaller than for
+the full pixel-grid whenever the region to be
+filled is large.
+
+At the end, texture-map the triangle-vertex
+values back onto the pixel-grid.
+
 ## Old Design Under Namespace `regfill`
 
 Application of the Dirichlet problem to the
