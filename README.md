@@ -53,7 +53,11 @@ handfull of pixels from the border of the filled
 region.  This suggests a triangle-based approach
 because a triangle allows for natural, linear
 interpolation of a scalar field defined at its
-vertices.
+vertices.  One need only find a reasonable
+method for picking a sparse set of points in the
+interior of the region.
+
+### One Possible Sparse Set
 
 First, consider every successive, binned image
 of the original image.  First 2x2, then 4x4,
@@ -85,14 +89,20 @@ lie along a straight section of the boundary,
 include the region-facing corners of the
 boundary-pixels.
 
-After all of the pixel-corners are saved,
-perform a Delaunay triangulation, and solve the
-Dirichlet problem on the triangles.  This will
-be much faster than solving for the full
-pixel-grid because the number of solution-points
-(corner-points) will be much smaller than for
-the full pixel-grid whenever the region to be
-filled is large.
+After all of the pixel-corners are saved, the
+number of points will be far small than the
+number of pixels in the region when the region
+be large.
+
+### Triangulation
+
+Perform a Delaunay triangulation on the points,
+and solve the Dirichlet problem on the
+triangles.  This will be much faster than
+solving for the full pixel-grid because the
+number of solution-points (corner-points) will
+be much smaller than for the full pixel-grid
+whenever the region to be filled is large.
 
 At the end, texture-map the triangle-vertex
 values back onto the pixel-grid.
