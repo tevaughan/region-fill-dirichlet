@@ -63,11 +63,11 @@ First, consider every successive, binned image
 of the original image.  First 2x2, then 4x4,
 then 8x8, etc.  In each case, the superpixel in
 the binned image might be imagined to contain
-the mean of the pixel-values in the image at the
-next higher stage of resolution, but that
-doesn't matter because we only care here about
-the corner-coordinates of each pixel at each
-stage of binning.
+the mean of the four corresponding pixel-values
+in the image at the next higher stage of
+resolution, but that doesn't matter because we
+care here only about the corner-coordinates of
+each pixel at each stage of binning.
 
 Then, for any given region, begin with the
 binning level at which at least one superpixel
