@@ -170,6 +170,16 @@ and so a large increase in speed can be obtained
 with minimal error relative to the full
 solution.
 
+## Another Idea for More Speed
+
+William Barham, my son in law, suggests that
+nothing is faster, for this problem, than a
+[conjugate-gradient method][cg].  That might be
+so simple to implement as for me to try it
+before I try the approach above.
+
+[cg]: https://en.wikipedia.org/wiki/Conjugate_gradient_method
+
 ## Old Design Under Namespace `regfill`
 
 Application of the Dirichlet problem to the
