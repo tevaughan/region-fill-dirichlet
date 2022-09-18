@@ -60,7 +60,7 @@ suggests interpolation over squares.
 ### Prepare Mask
 
 Consider a mask $M$, which is the same size
-$W\:\times\:H$ as the original image but with
+$W \times H$ as the original image but with
 value of 1 at each pixel to be filled and 0 at
 each pixel not to be filled.  Make a new mask
 $M'$ by resetting to zero every pixel that has
