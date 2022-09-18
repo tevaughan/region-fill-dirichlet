@@ -1,3 +1,8 @@
+<!-- vim: set filetype=none:
+  Turn off markdown-type because LaTeX-notation
+  doesn't work with markdown-mode.
+  -->
+
 # region-fill-dirichlet
 
 The new design is now the recommended default.
