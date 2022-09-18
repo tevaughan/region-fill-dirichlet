@@ -162,7 +162,8 @@ large portions of the deep interior of the
 filled region.  But this is precisely where the
 solution is likely to be of low order anyway,
 and so a large increase in speed can be obtained
-with minimal loss of precision in the solution.
+with minimal error relative to the full
+solution.
 
 ## Old Design Under Namespace `regfill`
 
