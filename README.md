@@ -141,10 +141,10 @@ be filled.
 ### Interpolation
 
 After the problem is solved, the edges and
-interior of each full superpixel in region to be
-filled must be filled with the values obtained
-by linearly interpolation the corner-values,
-which were solved for.
+interior of each full superpixel in the region
+to be filled must be filled with the values
+obtained by linearly interpolating the
+corner-values, which were solved for.
 
 ## Old Design Under Namespace `regfill`
 
