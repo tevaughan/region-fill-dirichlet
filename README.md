@@ -88,7 +88,7 @@ superpixel contains the sum of the four
 corresponding pixel-values in the mask at the
 next higher stage of resolution.  Find the
 greatest $N$ such that $M_N$ has at least one
-superpixel whose value is $2^{2*N}$; that is, in
+superpixel whose value is $2^{2N}$; that is, in
 $M_N$ at least one superpixel whose every
 corresponding pixel in $M'$ is 1.
 
@@ -108,11 +108,11 @@ the corresponding pixels at the intermediate
 resolutions to zero.
 
 Do the same thing in $M_{N-1}$ for each
-superpixel whose value is $2^{2*[N-1]}$, in
+superpixel whose value is $2^{2[N-1]}$, in
 $M_{N-2}$ for each superpixel whose value is
-$2^{2*[N-2]}$, etc., and concluding with the
-same treatment in $M_2$ for each superpixel
-whose value is 16.
+$2^{2[N-2]}$, etc., and concluding with the same
+treatment in $M_2$ for each superpixel whose
+value is 16.
 
 ### Prepare Linear Model
 
