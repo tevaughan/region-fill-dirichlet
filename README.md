@@ -117,7 +117,7 @@ value is 16.
 ### Prepare Linear Model
 
 When the size of the region to be filled is
-larger than, say, $8 \times 8$ pixels, the
+larger than, say, $16 \times 16$ pixels, the
 elimination of all but the four corner pixels
 from each full superpixel drastically reduces
 the size of the linear problem.  The remaining
