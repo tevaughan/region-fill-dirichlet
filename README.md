@@ -109,10 +109,10 @@ contribute properly to the coefficients of the
 sparse, square matrix used in the solution and
 so that, after the solution is obtained, the
 superpixel's corresponding pixels in $M'$ (other
-than the corner pixels) can be filled by linear
-interpolation of the corners.  Also, set all of
-the corresponding pixels at the intermediate
-resolutions to zero.
+than the corner pixels) can be filled by
+bilinear interpolation of the corners.  Also,
+set all of the corresponding pixels at the
+intermediate resolutions to zero.
 
 Do the same thing in $M_{N-1}$ for each
 superpixel whose value is $2^{2[N-1]}$, in
@@ -133,7 +133,7 @@ margin $m$ increases, but the matrix does become
 denser.  Whenever a lone pixel $p$ in the linear
 system lie, say, to the left of the border of a
 full superpixel, the contribution from the
-border-pixel is computed as the linear
+border-pixel is computed as the bilinear
 interpolation of the two corner-pixels that
 bound that border.  So $p$ is connected not just
 to a single value on the right but to a properly
@@ -145,13 +145,24 @@ render the solution should be greatly reduced
 for any sufficiently large region of pixels to
 be filled.
 
-### Interpolation
+### Bilinear Interpolation
 
 After the problem is solved, the edges and
-interior of each full superpixel in the region
-to be filled must be filled with the values
-obtained by linearly interpolating the
-corner-values, which were solved for.
+interior of each full superpixel must be filled
+with the values obtained by bilinearly
+interpolating the corner-values, which were
+solved for.
+
+Because the bilinear interpolant is a low-order
+solution to Laplace's equation, what this
+approach does is to provide a solution to
+Laplace's equation such that a low-order
+solution is mandated over large portions of the
+deep interior of the filled region.  But this is
+precisely where the solution is likely to be of
+low order anyway, and so a large increase in
+speed can be obtained with minimal loss of
+precision in the solution.
 
 ## Old Design Under Namespace `regfill`
 
