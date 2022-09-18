@@ -282,7 +282,7 @@ void timing(Image &image, Image const &mask, bool cg) {
   std::chrono::duration<double> t3= end - start;
   cout << "  time to construct from coords: " << t3.count() << " s" << endl;
 
-  char const *gfName= (cg ? "gray-filled-cg" : "gray-filled");
+  char const *gfName= (cg ? "gray-filled-cg.pgm" : "gray-filled.pgm");
   writePgm(gfName, image);
 }
 
