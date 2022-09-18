@@ -51,7 +51,7 @@ in on the central, filled circle:
 ![gray-filled.png](test/gray-filled.png)
 ![gray-filled-zoom-eq.png](test/gray-filled-zoom-eq.png)
 
-## Idea for Even Faster Performance
+## Idea for Faster Performance in Future Version
 
 In a large, filled region, the pixel-values are
 very smoothly distributed across space in the
