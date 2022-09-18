@@ -96,7 +96,7 @@ In each case, a superpixel contains the sum of
 the four corresponding pixel-values in the mask
 at the next higher stage of resolution.  Find
 the greatest $N$ such that $M_N$ has at least
-one interpolable superpixel whose value is
+one interpolable superpixel, one whose value is
 $2^{2N}$; that is, in $M_N$ at least one
 superpixel whose every corresponding pixel in
 $M'$ is 1, so that the superpixel is completely
