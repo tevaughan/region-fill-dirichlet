@@ -59,15 +59,16 @@ vicinity of every filled pixel that is farther
 than a handfull of pixels from the border of the
 filled region.  Because of the underlying
 geometry of the pixel-grid, an approach based on
-bilinear interpolation over squares seems
-appropriate.  The bilinear interpolant is
-natural within the square.  Although the
-bilinear interpolant is linear along each
-coordinate-axis, it is quadratic along any other
-direction.  The bilinear interpolant is a
-harmonic function that satisfies Laplace's
-equation, which is what constrains the values at
-the corner of the square.
+the bilinear interpolation over a square group
+of pixels seems appropriate.  The bilinear
+interpolant is natural within the square.
+Although the bilinear interpolant is linear
+along each coordinate-axis, it is quadratic
+along any other direction.  The bilinear
+interpolant is a harmonic function that
+satisfies Laplace's equation, which is what
+constrains the values at the corner of the
+square.
 
 ### Prepare Mask
 
