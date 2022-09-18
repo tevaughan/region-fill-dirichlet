@@ -41,6 +41,13 @@ function-object.
 Speed with `-O3` is much faster than that of
 old design with `-O3`.
 
+Conjugate-gradient solution is now available as
+final, optional argument to constructor.  It is
+much faster than Cholesky on my test-image, but
+it is turned off by default for the moment.
+Nevertheless, unit-tests all use
+conjugate-gradient and look OK.
+
 Here are the original image, the mask, the
 filled image produced by implementation of new
 design, and a histogram-equalized image zoomed
@@ -51,136 +58,6 @@ in on the central, filled circle:
 ![gray-filled.png](test/gray-filled.png)
 ![gray-filled-zoom-eq.png](test/gray-filled-zoom-eq.png)
 
-## Ideas for Yet More Speed in Future Version
-
-### Bilinear Interpolation Over Squares
-
-In a large, filled region, the pixel-values are
-very smoothly distributed across space in the
-vicinity of every filled pixel that is farther
-than a handfull of pixels from the border of the
-filled region.  Because of the underlying
-geometry of the pixel-grid, an approach based on
-the bilinear interpolation over a square group
-of pixels seems appropriate.  The bilinear
-interpolant is natural within the square.
-Although the bilinear interpolant is linear
-along each coordinate-axis, it is quadratic
-along any other direction.  The bilinear
-interpolant is a harmonic function that
-satisfies Laplace's equation, which is what
-constrains the values at the corner of the
-square.
-
-#### Prepare Mask
-
-Consider a mask $M$, which is the same size
-$W \times H$ as the original image but with
-value of 1 at each pixel to be filled and 0 at
-each pixel not to be filled.  Make a new mask
-$M'$ by copying $M$ and then resetting to zero
-every pixel that lies within some marginal
-distance $m$ pixels from a 0 along either the
-row-direction or the column-direction.  Extend
-$M'$ to a larger mask $M_0$ by appending zeros
-toward the lower right of $M'$ until the width
-$W_0$ of $M_0$ is the smallest power of two
-greater than or equal to $W$; similarly, for
-$H_0$ and $H$.
-
-#### Find Squares Over Which To Interpolate
-
-Consider every successive, binned image of
-$M_0.$  First $M_1$, which has $W_1=W_0/2$, has
-$H_1=H_0/2$, and is $2 \times 2$-binned; then
-$M_2$, $4 \times 4$; $M_3$, $8 \times 8$; etc.
-In each case, a superpixel contains the sum of
-the four corresponding pixel-values in the mask
-at the next higher stage of resolution.  Find
-the greatest $N$ such that $M_N$ has at least
-one interpolable superpixel, one whose value is
-$2^{2N}$; that is, in $M_N$ at least one
-superpixel whose every corresponding pixel in
-$M'$ is 1, so that the superpixel is completely
-within the region to be filled and deeper within
-the region than the margin $m$.
-
-If $N>1$, then, for each such superpixel in
-$M_N$, let the four corresponding corner-pixels
-in $M'$ remain set to 1, but set the other
-$2^{2N} - 4$ corresponding pixels in $M'$ to
-zero.  Keep track of each interpolable
-superpixel, so that pixels on its boundary in
-the original image can contribute properly to
-the coefficients of the sparse, square matrix
-used in the solution and so that, after the
-solution is obtained, the superpixel's
-corresponding pixels in the original image
-(other than the corner pixels) can be filled by
-bilinear interpolation of the corners. Also, set
-all of the corresponding pixels at the
-intermediate resolutions to zero.
-
-Do the same thing in $M_{N-1}$ for each
-interpolable superpixel, whose value is
-$2^{2[N-1]}$, in $M_{N-2}$ for each with value
-$2^{2[N-2]}$, etc., and concluding with the same
-treatment in $M_2$ for each with value 16.
-
-#### Prepare Linear Model
-
-When the size of the region to be filled is
-larger than, say, $16 \times 16$ pixels, the
-elimination of all but the four corner pixels
-from each interpolable superpixel drastically
-reduces the size of the linear problem.  The
-remaining square matrix is still sparse,
-especially as the margin $m$ increases, but the
-matrix does become denser.  Whenever a lone
-pixel $p$ in the linear system lie, say, to the
-left of the border of an interpolable
-superpixel, the contribution from the
-border-pixel is computed as the bilinear
-interpolation of the two corner-pixels that
-bound that border.  So $p$ is connected not just
-to a single value on the right but to a properly
-weighted pair on the right.  Effects like this
-increase the density of the problem.
-
-However, the time to factor the matrix and to
-render the solution should be greatly reduced
-for any sufficiently large region of pixels to
-be filled.
-
-#### Bilinear Interpolation
-
-After the problem is solved, the edges and
-interior of each interpolable superpixel must be
-filled with the values obtained by bilinearly
-interpolating the corner-values, which were
-solved for.
-
-Because the bilinear interpolant is a
-low-polynimal-order solution to Laplace's
-equation over the coordinates of the grid, what
-this approach does is, while solving Laplace's
-equation, to mandate a low-order solution over
-large portions of the deep interior of the
-filled region.  But this is precisely where the
-solution is likely to be of low order anyway,
-and so a large increase in speed can be obtained
-with minimal error relative to the full
-solution.
-
-### Conjugate Gradient
-
-William Barham, my son in law, suggests that
-nothing is faster, for this problem, than a
-[conjugate-gradient method][cg].  That might be
-so simple to implement as for me to try it
-before I try the approach above.
-
-[cg]: https://en.wikipedia.org/wiki/Conjugate_gradient_method
 
 ## Old Design Under Namespace `regfill`
 

@@ -51,7 +51,11 @@ class Fill {
   SparseMatrix<float> a_;
 
   /// Pointer to Cholesky-decomposition of square matrix for linear problem.
-  SimplicialCholesky<SparseMatrix<float>> *A_;
+  SimplicialCholesky<SparseMatrix<float>> *A_= nullptr;
+
+  /// True only if conjugate-gradient method should be used instead of
+  /// Cholesky.
+  bool cg_;
 
   /// Disallow copying because we store owned pointer.
   Fill(Fill const &)= delete;
@@ -141,8 +145,12 @@ public:
   /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   /// \param width   Number of columns in image.
   /// \param height  Number of rows in image.
+  /// \param cg      True if conjugate-gradient method should be used.
   ///
-  Fill(ArrayX2i const &coords, unsigned width, unsigned height);
+  Fill(ArrayX2i const &coords,
+       unsigned        width,
+       unsigned        height,
+       bool            cg= false);
 
   /// Prepare for filling one or more single-component images of size
   /// `width*height`; pixels to fill are given by non-zero pixels in `mask`.
@@ -168,12 +176,19 @@ public:
   /// \param  stride  Number of instances of type Comp between component of one
   ///                 pixel and corresponding component of next pixel.
   ///
+  /// \param cg       True if conjugate-gradient method should be used instead
+  ///                 of Cholesky.
+  ///
   template<typename Comp>
-  Fill(Comp *mask, unsigned width, unsigned height, unsigned stride= 1);
+  Fill(Comp    *mask,
+       unsigned width,
+       unsigned height,
+       unsigned stride= 1,
+       bool     cg    = false);
 
   /// Deallocate Cholesky-decomposition.
   virtual ~Fill() {
-    if(A_) delete A_;
+    if(A_ != nullptr) delete A_;
   }
 
   /// Coordinates of each filled pixel.
@@ -287,7 +302,7 @@ void Fill::initMatrix() {
     if(bot >= 0) t.push_back({i, bot, -1.0f});
   }
   a_.setFromTriplets(t.begin(), t.end());
-  A_= new SimplicialCholesky<SparseMatrix<float>>(a_);
+  if(!cg_) A_= new SimplicialCholesky<SparseMatrix<float>>(a_);
 }
 
 
@@ -317,12 +332,13 @@ void Fill::initCoords(ArrayX2i const &coords) {
 }
 
 
-Fill::Fill(ArrayX2i const &coords, unsigned width, unsigned height):
+Fill::Fill(ArrayX2i const &coords, unsigned width, unsigned height, bool cg):
     coords_(coords.rows(), coords.cols()),
     wdth_(width),
     hght_(height),
     lrtb_(coords.rows(), 4),
-    a_(coords.rows(), coords.rows()) {
+    a_(coords.rows(), coords.rows()),
+    cg_(cg) {
   initCoords(coords); // Side effect is change of coords_.rows().
   lrtb_.conservativeResize(coords_.rows(), 4);
   lrtb_.col(0)= nLft();
@@ -360,8 +376,9 @@ ArrayX2i Fill::findCoords(Comp *m, unsigned w, unsigned h, unsigned stride) {
 
 
 template<typename Comp>
-Fill::Fill(Comp *mask, unsigned width, unsigned height, unsigned stride):
-    Fill(findCoords(mask, width, height, stride), width, height) {}
+Fill::Fill(
+      Comp *mask, unsigned width, unsigned height, unsigned stride, bool cg):
+    Fill(findCoords(mask, width, height, stride), width, height, cg) {}
 
 
 template<typename Comp>
@@ -388,7 +405,27 @@ VectorXf Fill::operator()(Comp *image, unsigned stride) const {
   // Now, pull pixel-data into b by evaluated vectorized expression.
   VectorXf const b= bL + bR + bT + bB;
   // Find answer.
-  VectorXf const x          = A_->solve(b);
+  VectorXf x;
+  if(cg_) {
+    x         = VectorXf::Zero(b.size());
+    VectorXf r= b - a_ * x;
+    VectorXf p= r;
+    while(true) {
+      float const    r2   = r.dot(r);
+      VectorXf const ap   = a_ * p;
+      float const    alpha= r2 / p.dot(ap);
+      VectorXf const xnew = x + alpha * p;
+      VectorXf const rnew = r - alpha * ap;
+      if(rnew.norm() < 1.0E-06f) break;
+      float const    beta= rnew.dot(rnew) / r2;
+      VectorXf const pnew= rnew + beta * p;
+      x                  = xnew;
+      r                  = rnew;
+      p                  = pnew;
+    }
+  } else {
+    x= A_->solve(b);
+  }
   constexpr bool is_const   = is_const_v<Comp>;
   constexpr bool is_integral= is_integral_v<Comp>;
   constexpr bool is_fp      = is_floating_point_v<Comp>;

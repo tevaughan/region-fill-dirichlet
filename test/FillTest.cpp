@@ -53,7 +53,7 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(2, 1);
   coords.row(2)= Array2i(3, 2);
-  Fill const f(coords, width1, height1);
+  Fill const f(coords, width1, height1, true);
   cout << "coordsMap:\n" << f.coordsMap() << endl;
   REQUIRE(f.coordsMap()(0, 0) == -1);
   REQUIRE(f.coordsMap()(1, 0) == -1);
@@ -98,15 +98,15 @@ TEST_CASE("Constructor produces right coordinates-map.", "[Fill]") {
 TEST_CASE("Constructor from mask produces right coordinates-map.", "[Fill]") {
   cout << "starting constructor-from-mask test" << endl;
   uint8_t  mask1[]= {0, 0, 0, 0, //
-                    0, 1, 0, 0, //
-                    0, 1, 0, 0, //
-                    0, 0, 1, 0, //
-                    0, 0, 0, 0};
+                     0, 1, 0, 0, //
+                     0, 1, 0, 0, //
+                     0, 0, 1, 0, //
+                     0, 0, 0, 0};
   ArrayX2i coords(3, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(2, 1);
   coords.row(2)= Array2i(3, 2);
-  Fill const f(mask1, width1, height1);
+  Fill const f(mask1, width1, height1, true);
   cout << "f.coords():\n" << f.coords() << endl;
   REQUIRE(f.coords().rows() == 3);
   REQUIRE(f.coords()(0) == coords(0));
@@ -136,7 +136,7 @@ TEST_CASE("Function works as expected.", "[Fill]") {
       coords.row(i++)= Array2i(r, c);
     }
   }
-  Fill const f(coords, width2, height2);
+  Fill const f(coords, width2, height2, true);
   cout << "coordsMap:\n" << f.coordsMap() << endl;
   auto const x= f(image);
   cout << "image (after):" << endl;
@@ -153,7 +153,7 @@ TEST_CASE("Constructor checks oob hi row.", "[Fill]") {
   ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(4, 1); // pixel oob on bottom edge
-  Fill const f(coords, width1, height1);
+  Fill const f(coords, width1, height1, true);
   REQUIRE(f.coords().rows() == 1);
 }
 
@@ -162,7 +162,7 @@ TEST_CASE("Constructor checks oob lo row.", "[Fill]") {
   ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(-1, 1); // pixel oob left of left edge
-  Fill const f(coords, width1, height1);
+  Fill const f(coords, width1, height1, true);
   REQUIRE(f.coords().rows() == 1);
 }
 
@@ -171,7 +171,7 @@ TEST_CASE("Constructor checks oob hi col.", "[Fill]") {
   ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, 3); // pixel oob on right edge
-  Fill const f(coords, width1, height1);
+  Fill const f(coords, width1, height1, true);
   REQUIRE(f.coords().rows() == 1);
 }
 
@@ -180,7 +180,7 @@ TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
   ArrayX2i coords(2, 2);
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(1, -1); // pixel oob above top edge
-  Fill const f(coords, width1, height1);
+  Fill const f(coords, width1, height1, true);
   REQUIRE(f.coords().rows() == 1);
 }
 
@@ -267,7 +267,7 @@ TEST_CASE("Big image.", "[Fill]") {
   writePgm("mask.pgm", mask);
 
   auto       start= std::chrono::steady_clock::now();
-  Fill const f(&mask(0, 0), image.cols(), image.rows());
+  Fill const f(&mask(0, 0), image.cols(), image.rows(), true);
   auto       way1= std::chrono::steady_clock::now();
   f(&image(0, 0));
   auto end= std::chrono::steady_clock::now();
@@ -278,7 +278,7 @@ TEST_CASE("Big image.", "[Fill]") {
   cout << "time to solve: " << t2.count() << " s" << endl;
 
   start= std::chrono::steady_clock::now();
-  Fill const f2(f.coords(), image.cols(), image.rows());
+  Fill const f2(f.coords(), image.cols(), image.rows(), true);
   end= std::chrono::steady_clock::now();
 
   std::chrono::duration<double> t3= end - start;
