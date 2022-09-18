@@ -95,7 +95,7 @@ corresponding pixel in $M'$ is 1.
 If $N>1$, then, for each such superpixel in
 $M_N$, let the four corresponding corner-pixels
 in $M'$ remain set to 1, but set the other
-$N \times N - 4$ corresponding pixels in $M'$ to
+$2^{2N} - 4$ corresponding pixels in $M'$ to
 zero.  Keep track of each superpixel so treated,
 so that pixels on its boundary in $M'$ can
 contribute properly to the coefficients of the
