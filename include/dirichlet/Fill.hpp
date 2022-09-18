@@ -17,9 +17,12 @@ using Eigen::ArrayX4i;
 using Eigen::ArrayXi;
 using Eigen::ArrayXXf;
 using Eigen::ArrayXXi;
+using Eigen::ConjugateGradient;
+using Eigen::Lower;
 using Eigen::Map;
 using Eigen::SimplicialCholesky;
 using Eigen::SparseMatrix;
+using Eigen::Upper;
 using Eigen::VectorXf;
 
 
@@ -52,6 +55,9 @@ class Fill {
 
   /// Pointer to Cholesky-decomposition of square matrix for linear problem.
   SimplicialCholesky<SparseMatrix<float>> *A_= nullptr;
+
+  /// Workspace for conjugate-gradient approach.
+  ConjugateGradient<SparseMatrix<float>, Lower | Upper> CG_;
 
   /// True only if conjugate-gradient method should be used instead of
   /// Cholesky.
@@ -302,7 +308,11 @@ void Fill::initMatrix() {
     if(bot >= 0) t.push_back({i, bot, -1.0f});
   }
   a_.setFromTriplets(t.begin(), t.end());
-  if(!cg_) A_= new SimplicialCholesky<SparseMatrix<float>>(a_);
+  if(cg_) {
+    CG_.compute(a_);
+  } else {
+    A_= new SimplicialCholesky<SparseMatrix<float>>(a_);
+  }
 }
 
 
@@ -407,22 +417,7 @@ VectorXf Fill::operator()(Comp *image, unsigned stride) const {
   // Find answer.
   VectorXf x;
   if(cg_) {
-    x         = VectorXf::Zero(b.size());
-    VectorXf r= b - a_ * x;
-    VectorXf p= r;
-    while(true) {
-      float const    r2   = r.dot(r);
-      VectorXf const ap   = a_ * p;
-      float const    alpha= r2 / p.dot(ap);
-      VectorXf const xnew = x + alpha * p;
-      VectorXf const rnew = r - alpha * ap;
-      if(rnew.norm() < 1.0E-06f) break;
-      float const    beta= rnew.dot(rnew) / r2;
-      VectorXf const pnew= rnew + beta * p;
-      x                  = xnew;
-      r                  = rnew;
-      p                  = pnew;
-    }
+    x= CG_.solve(b);
   } else {
     x= A_->solve(b);
   }

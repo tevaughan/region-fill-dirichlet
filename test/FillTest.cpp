@@ -106,7 +106,7 @@ TEST_CASE("Constructor from mask produces right coordinates-map.", "[Fill]") {
   coords.row(0)= Array2i(1, 1);
   coords.row(1)= Array2i(2, 1);
   coords.row(2)= Array2i(3, 2);
-  Fill const f(mask1, width1, height1, true);
+  Fill const f(mask1, width1, height1, 1, true);
   cout << "f.coords():\n" << f.coords() << endl;
   REQUIRE(f.coords().rows() == 3);
   REQUIRE(f.coords()(0) == coords(0));
@@ -261,30 +261,38 @@ void writePgm(char const *f, Image const &image) {
 }
 
 
-TEST_CASE("Big image.", "[Fill]") {
-  Image       image= readPgm("gray.pgm"); // non-const for write-back by f()
-  Image const mask = drawMask(image);
-  writePgm("mask.pgm", mask);
+void timing(Image &image, Image const &mask, bool cg) {
+  cout << "conjugate-gradient=" << cg << endl;
 
   auto       start= std::chrono::steady_clock::now();
-  Fill const f(&mask(0, 0), image.cols(), image.rows(), true);
+  Fill const f(&mask(0, 0), image.cols(), image.rows(), 1, cg);
   auto       way1= std::chrono::steady_clock::now();
   f(&image(0, 0));
   auto end= std::chrono::steady_clock::now();
 
   std::chrono::duration<double> t1= way1 - start;
   std::chrono::duration<double> t2= end - way1;
-  cout << "time to construct: " << t1.count() << " s" << endl;
-  cout << "time to solve: " << t2.count() << " s" << endl;
+  cout << "  time to construct: " << t1.count() << " s" << endl;
+  cout << "  time to solve: " << t2.count() << " s" << endl;
 
   start= std::chrono::steady_clock::now();
-  Fill const f2(f.coords(), image.cols(), image.rows(), true);
+  Fill const f2(f.coords(), image.cols(), image.rows(), cg);
   end= std::chrono::steady_clock::now();
 
   std::chrono::duration<double> t3= end - start;
-  cout << "time to construct from coords: " << t3.count() << " s" << endl;
+  cout << "  time to construct from coords: " << t3.count() << " s" << endl;
 
-  writePgm("gray-filled.pgm", image);
+  char const *gfName= (cg ? "gray-filled-cg" : "gray-filled");
+  writePgm(gfName, image);
+}
+
+
+TEST_CASE("Big image.", "[Fill]") {
+  Image       image= readPgm("gray.pgm"); // non-const for write-back by f()
+  Image const mask = drawMask(image);
+  writePgm("mask.pgm", mask);
+  timing(image, mask, false);
+  timing(image, mask, true);
 }
 
 
