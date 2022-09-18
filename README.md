@@ -53,14 +53,14 @@ in on the central, filled circle:
 
 ## Idea for Even Faster Performance
 
-In a large, filled region, the gradient of the
-pixel-values tends toward planar smoothness in
-the vicinity of every filled pixel that is
-farther than a handfull of pixels from the
-border of the filled region.  This suggests an
-approach based on linear interpolation.  The
-intrinsic geometry of the underlying pixel-grid
-suggests interpolation over squares.
+In a large, filled region, the pixel-values are
+very smoothly distributed across space in the
+vicinity of every filled pixel that is farther
+than a handfull of pixels from the border of the
+filled region.  This suggests an approach based
+on linear interpolation.  The intrinsic geometry
+of the underlying pixel-grid suggests
+interpolation over squares.
 
 ### Prepare Mask
 
