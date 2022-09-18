@@ -12,9 +12,9 @@ feature of propagating noise from the boundary
 into the interior, but I have not reproduced
 that in the test-code for the new design.
 
-## New Under Namespace `dirichlet`
+## Current Design Under Namespace `dirichlet`
 
-Redesigned code requires at least
+Current code requires at least
 
 - Eigen-3.4
 - Catch2-3.0 (for unit-tests)
@@ -51,7 +51,9 @@ in on the central, filled circle:
 ![gray-filled.png](test/gray-filled.png)
 ![gray-filled-zoom-eq.png](test/gray-filled-zoom-eq.png)
 
-## Idea for Yet More Speed in Future Version
+## Ideas for Yet More Speed in Future Version
+
+### Bilinear Interpolation Over Squares
 
 In a large, filled region, the pixel-values are
 very smoothly distributed across space in the
@@ -70,7 +72,7 @@ satisfies Laplace's equation, which is what
 constrains the values at the corner of the
 square.
 
-### Prepare Mask
+#### Prepare Mask
 
 Consider a mask $M$, which is the same size
 $W \times H$ as the original image but with
@@ -86,7 +88,7 @@ $W_0$ of $M_0$ is the smallest power of two
 greater than or equal to $W$; similarly, for
 $H_0$ and $H$.
 
-### Find Squares Over Which To Interpolate
+#### Find Squares Over Which To Interpolate
 
 Consider every successive, binned image of
 $M_0.$  First $M_1$, which has $W_1=W_0/2$, has
@@ -125,7 +127,7 @@ $2^{2[N-1]}$, in $M_{N-2}$ for each with value
 $2^{2[N-2]}$, etc., and concluding with the same
 treatment in $M_2$ for each with value 16.
 
-### Prepare Linear Model
+#### Prepare Linear Model
 
 When the size of the region to be filled is
 larger than, say, $16 \times 16$ pixels, the
@@ -150,7 +152,7 @@ render the solution should be greatly reduced
 for any sufficiently large region of pixels to
 be filled.
 
-### Bilinear Interpolation
+#### Bilinear Interpolation
 
 After the problem is solved, the edges and
 interior of each interpolable superpixel must be
@@ -170,7 +172,7 @@ and so a large increase in speed can be obtained
 with minimal error relative to the full
 solution.
 
-## Another Idea for More Speed
+### Conjugate Gradient
 
 William Barham, my son in law, suggests that
 nothing is faster, for this problem, than a
