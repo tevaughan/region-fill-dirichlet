@@ -92,48 +92,52 @@ Consider every successive, binned image of
 $M_0.$  First $M_1$, which has $W_1=W_0/2$, has
 $H_1=H_0/2$, and is $2 \times 2$-binned; then
 $M_2$, $4 \times 4$; $M_3$, $8 \times 8$; etc.
-In each case, the superpixel contains the sum of
+In each case, a superpixel contains the sum of
 the four corresponding pixel-values in the mask
 at the next higher stage of resolution.  Find
 the greatest $N$ such that $M_N$ has at least
-one superpixel whose value is $2^{2N}$; that is,
-in $M_N$ at least one superpixel whose every
-corresponding pixel in $M'$ is 1.
+one interpolable superpixel whose value is
+$2^{2N}$; that is, in $M_N$ at least one
+superpixel whose every corresponding pixel in
+$M'$ is 1, so that the superpixel is completely
+within the region to be filled and deeper within
+the region than the margin $m$.
 
 If $N>1$, then, for each such superpixel in
 $M_N$, let the four corresponding corner-pixels
 in $M'$ remain set to 1, but set the other
 $2^{2N} - 4$ corresponding pixels in $M'$ to
-zero.  Keep track of each superpixel so treated,
-so that pixels on its boundary in $M'$ can
-contribute properly to the coefficients of the
-sparse, square matrix used in the solution and
-so that, after the solution is obtained, the
-superpixel's corresponding pixels in $M'$ (other
-than the corner pixels) can be filled by
-bilinear interpolation of the corners.  Also,
-set all of the corresponding pixels at the
+zero.  Keep track of each interpolable
+superpixel, so that pixels on its boundary in
+the original image can contribute properly to
+the coefficients of the sparse, square matrix
+used in the solution and so that, after the
+solution is obtained, the superpixel's
+corresponding pixels in the original image
+(other than the corner pixels) can be filled by
+bilinear interpolation of the corners. Also, set
+all of the corresponding pixels at the
 intermediate resolutions to zero.
 
 Do the same thing in $M_{N-1}$ for each
-superpixel whose value is $2^{2[N-1]}$, in
-$M_{N-2}$ for each superpixel whose value is
+interpolable superpixel, whose value is
+$2^{2[N-1]}$, in $M_{N-2}$ for each with value
 $2^{2[N-2]}$, etc., and concluding with the same
-treatment in $M_2$ for each superpixel whose
-value is 16.
+treatment in $M_2$ for each with value 16.
 
 ### Prepare Linear Model
 
 When the size of the region to be filled is
 larger than, say, $16 \times 16$ pixels, the
 elimination of all but the four corner pixels
-from each full superpixel drastically reduces
-the size of the linear problem.  The remaining
-square matrix is still sparse, especially as the
-margin $m$ increases, but the matrix does become
-denser.  Whenever a lone pixel $p$ in the linear
-system lie, say, to the left of the border of a
-full superpixel, the contribution from the
+from each interpolable superpixel drastically
+reduces the size of the linear problem.  The
+remaining square matrix is still sparse,
+especially as the margin $m$ increases, but the
+matrix does become denser.  Whenever a lone
+pixel $p$ in the linear system lie, say, to the
+left of the border of an interpolable
+superpixel, the contribution from the
 border-pixel is computed as the bilinear
 interpolation of the two corner-pixels that
 bound that border.  So $p$ is connected not just
@@ -149,8 +153,8 @@ be filled.
 ### Bilinear Interpolation
 
 After the problem is solved, the edges and
-interior of each full superpixel must be filled
-with the values obtained by bilinearly
+interior of each interpolable superpixel must be
+filled with the values obtained by bilinearly
 interpolating the corner-values, which were
 solved for.
 
