@@ -81,15 +81,15 @@ $H_0$ and $H$.
 ### Find Squares Over Which To Interpolate
 
 Consider every successive, binned image of
-$M_0$.  First $M_1$, which is
-$2 \times 2$-binned, then $M_2$, $4 \times 4$;
-$M_3$, $8 \times 8$; etc.  In each case, the
-superpixel contains the sum of the four
-corresponding pixel-values in the mask at the
-next higher stage of resolution.  Find the
-greatest $N$ such that $M_N$ has at least one
-superpixel whose value is $2^{2N}$; that is, in
-$M_N$ at least one superpixel whose every
+$M_0.$  First $M_1$, which has $W_1=W_0/2$, has
+$H_1=H_0/2$, and is $2 \times 2$-binned; then
+$M_2$, $4 \times 4$; $M_3$, $8 \times 8$; etc.
+In each case, the superpixel contains the sum of
+the four corresponding pixel-values in the mask
+at the next higher stage of resolution.  Find
+the greatest $N$ such that $M_N$ has at least
+one superpixel whose value is $2^{2N}$; that is,
+in $M_N$ at least one superpixel whose every
 corresponding pixel in $M'$ is 1.
 
 If $N>1$, then, for each such superpixel in
