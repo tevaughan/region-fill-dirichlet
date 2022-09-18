@@ -153,16 +153,16 @@ with the values obtained by bilinearly
 interpolating the corner-values, which were
 solved for.
 
-Because the bilinear interpolant is a low-order
-solution to Laplace's equation, what this
-approach does is to provide a solution to
-Laplace's equation such that a low-order
-solution is mandated over large portions of the
-deep interior of the filled region.  But this is
-precisely where the solution is likely to be of
-low order anyway, and so a large increase in
-speed can be obtained with minimal loss of
-precision in the solution.
+Because the bilinear interpolant is a
+low-polynimal-order solution to Laplace's
+equation over the coordinates of the grid, what
+this approach does is, while solving Laplace's
+equation, to mandate a low-order solution over
+large portions of the deep interior of the
+filled region.  But this is precisely where the
+solution is likely to be of low order anyway,
+and so a large increase in speed can be obtained
+with minimal loss of precision in the solution.
 
 ## Old Design Under Namespace `regfill`
 
