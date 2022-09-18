@@ -63,14 +63,15 @@ Consider a mask $M$, which is the same size
 $W \times H$ as the original image but with
 value of 1 at each pixel to be filled and 0 at
 each pixel not to be filled.  Make a new mask
-$M'$ by resetting to zero every pixel that has
-value 1 in $M$ and that is within some margin of
-$m$ pixels of a 0 along either the row-direction
-or the column-direction.  Extend $M'$ to a
-larger mask $M_0$ by appending zeros toward the
-lower right of $M'$ until the width $W_0$ of
-$M_0$ is the smallest power of two greater than
-or equal to $W$; similarly, for $H_0$ and $H$.
+$M'$ by copying $M$ and then resetting to zero
+every pixel that lies within some marginal
+distance $m$ pixels from a 0 along either the
+row-direction or the column-direction.  Extend
+$M'$ to a larger mask $M_0$ by appending zeros
+toward the lower right of $M'$ until the width
+$W_0$ of $M_0$ is the smallest power of two
+greater than or equal to $W$; similarly, for
+$H_0$ and $H$.
 
 ### Find Squares Over Which To Interpolate
 
@@ -116,11 +117,11 @@ elimination of all but the four corner pixels
 from each full superpixel drastically reduces
 the size of the linear problem.  The remaining
 square matrix is still sparse, especially as the
-margine $m$ increases, but the matrix does
-become denser.  Whenever a lone pixel $p$ in the
-linear system lie, say, to the left of the
-border of a full superpixel, the contribution
-from the border-pixel is computed as the linear
+margin $m$ increases, but the matrix does become
+denser.  Whenever a lone pixel $p$ in the linear
+system lie, say, to the left of the border of a
+full superpixel, the contribution from the
+border-pixel is computed as the linear
 interpolation of the two corner-pixels that
 bound that border.  So $p$ is connected not just
 to a single value on the right but to a properly
