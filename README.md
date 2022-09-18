@@ -49,65 +49,90 @@ in on the central, filled circle:
 ## Idea for Even Faster Performance
 
 In a large, filled region, the gradient of the
-pixel-values is very smooth in the vicinity of
-every filled pixel that is farther than a
-handfull of pixels from the border of the filled
-region.  This suggests a triangle-based approach
-because a triangle allows for natural, linear
-interpolation of a scalar field defined at its
-vertices.  One need only find a reasonable
-method for picking a sparse set of points in the
-interior of the region.
+pixel-values tends toward planar smoothness in
+the vicinity of every filled pixel that is
+farther than a handfull of pixels from the
+border of the filled region.  This suggests an
+approach based on linear interpolation.  The
+intrinsic geometry of the underlying pixel-grid
+suggests interpolation over squares.
 
-### One Possible Sparse Set
+### Prepare Mask
 
-First, consider every successive, binned image
-of the original image.  First 2x2, then 4x4,
-then 8x8, etc.  In each case, the superpixel in
-the binned image might be imagined to contain
-the mean of the four corresponding pixel-values
-in the image at the next higher stage of
-resolution, but that doesn't matter because we
-care here only about the corner-coordinates of
-each pixel at each stage of binning.
+Consider a mask `M`, which is the same size
+`W*H` as the original image but with value of 1
+at each pixel to be filled and 0 at each pixel
+not to be filled.  Make a new mask `M'` by
+resetting to zero every pixel that has value 1
+in `M` and that is within `m` pixels of a 0
+along either the row-direction or the
+column-direction.  Extend `M'` to a larger mask
+`M_0` by appending zeros toward the lower right
+of `M'` until the width `W_0` of `M_0` is the
+smallest power of two greater than or equal to
+`W`; similarly, for `H_0` and `H`.
 
-Then, for any given region, begin with the
-binning level at which at least one superpixel
-fits entirely within the region to be filled.
-Save the coordinates of the corners of each such
-superpixel.
+### Find Squares Over Which To Interpolate
 
-Then advance to the next higher resolution, and
-find all of the superpixels outside those
-already found but completely within the region
-to be filled.  Save the coordinates of each such
-superpixel.
+Consider every successive, binned image of
+`M_0`.  First `M_1`, which is 2x2-binned, then
+`M_2`, 4x4; `M_3`, 8x8; etc.  In each case, the
+superpixel contains the sum of the four
+corresponding pixel-values in the mask at the
+next higher stage of resolution.  Find the
+greatest `N` such that `M_N` has at least one
+superpixel whose value is `2^[2*N]`; that is, in
+`M_N` at least one superpixel whose every
+corresponding pixel in `M'` is 1.
 
-At the last stage in this process, the corners
-of the highest-resolution pixels are saved.
+If `N>1`, then, for each such superpixel in
+`M_N`, let the four corresponding corner-pixels
+in `M'` remain set to 1, but set the other
+`N*N-4` corresponding pixels in `M'` to zero.
+Keep track of each superpixel so treated, so
+that pixels on its boundary in `M'` can
+contribute properly to the coefficients of the
+sparse, square matrix used in the solution and
+so that, after the solution is obtained, the
+superpixel's corresponding pixels in `M'` (other
+than the corner pixels) can be filled by linear
+interpolation of the corners.  Also, set all of
+the corresponding pixels at the intermediate
+resolutions to zero.
 
-At any stage in the process, if a binned pixel
-lie along a straight section of the boundary,
-include the region-facing corners of the
-boundary-pixels.
+Do the same thing in `M_{N-1}` for each
+superpixel whose value is `2^[2*[N-1]]`, in
+`M_{N-2}` for each superpixel whose value is
+`2^[2*[N-2]]`, etc., and concluding with the
+same treatment in `M_2` for each superpixel
+whose value is 16.
 
-After all of the pixel-corners are saved, the
-number of points will be far small than the
-number of pixels in the region when the region
-be large.
+### Prepare Linear Model
 
-### Triangulation
+When the size of the region to be filled is
+larger than, say, `8*8` pixels, the elimination
+of all but the four corner pixels from each full
+superpixel drastically reduces the size of the
+linear problem.  The remaining square matrix is
+still sparse, especially as `m` increases, but
+the matrix does become denser.  Whenever a lone
+pixel `p` in the linear system lie, say, to the
+left of the border of a full superpixel, the
+contribution from the border-pixel is computed
+as the linear interpolation of the two
+corner-pixels that bound that border.  So `p` is
+connected not just to a single value on the
+right but to a properly weighted pair on the
+right.  Effects like this increase the density
+of the problem.
 
-Perform a Delaunay triangulation on the points,
-and solve the Dirichlet problem on the
-triangles.  This will be much faster than
-solving for the full pixel-grid because the
-number of solution-points (corner-points) will
-be much smaller than for the full pixel-grid
-whenever the region to be filled is large.
+### Interpolation
 
-At the end, texture-map the triangle-vertex
-values back onto the pixel-grid.
+After the problem is solved, the edges and
+interior of each full superpixel in region to be
+filled must be filled with the values obtained
+by linearly interpolation the corner-values,
+which were solved for.
 
 ## Old Design Under Namespace `regfill`
 
