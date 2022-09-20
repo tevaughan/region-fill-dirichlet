@@ -19,7 +19,6 @@ using Eigen::ArrayXXf;
 using Eigen::ArrayXXi;
 using Eigen::ConjugateGradient;
 using Eigen::Lower;
-using Eigen::Map;
 using Eigen::SimplicialCholesky;
 using Eigen::SparseMatrix;
 using Eigen::Upper;
@@ -72,7 +71,7 @@ class Fill {
   /// coordsMap_ as single column.
   /// \return  coordsMap_ as single column.
   auto cmCol() const {
-    return Map<ArrayXi const>(&coordsMap_(0, 0), wdth_ * hght_, 1);
+    return Eigen::Map<ArrayXi const>(&coordsMap_(0, 0), wdth_ * hght_, 1);
   }
 
   /// Expression-template for array, of which each element `e` contains
@@ -125,7 +124,7 @@ class Fill {
   /// \param  height  Height of mask.
   template<typename Comp>
   static ArrayX2i
-  findCoords(Comp *mask, unsigned width, unsigned height, unsigned stride);
+  findCoords(Comp *mask, unsigned width, unsigned height, int stride);
 
   /// Initialize square matrix for linear problem.
   void initMatrix();
@@ -133,6 +132,19 @@ class Fill {
   /// Initialize coords_ (which pixels to fill), and initialize coordsMap_.
   /// \param coords  Coordinates of each pixel to be Dirichlet-filled.
   void initCoords(ArrayX2i const &coords);
+
+  /// Calculate solution to linear system for one color-component of image.
+  /// \tparam Map    Type of single-component image.
+  /// \param  image  Reference to single-component image.
+  /// \return        Solution to linear system.
+  template<typename Map> VectorXf solve(Map const &image) const;
+
+  /// Copy solution back into original image.
+  /// \tparam Map    Type of single-component image.
+  /// \param  image  Reference to single-component image.
+  /// \param  x      Solution.
+  template<typename Map>
+  void copySolutionBackIntoImage(Map &im, VectorXf const &x) const;
 
 public:
   /// Prepare for filling one or more single-component images of size
@@ -189,7 +201,7 @@ public:
   Fill(Comp    *mask,
        unsigned width,
        unsigned height,
-       unsigned stride= 1,
+       int      stride= 1,
        bool     cg    = false);
 
   /// Deallocate Cholesky-decomposition.
@@ -235,7 +247,7 @@ public:
   /// \return        Solution to linear system.
   ///
   template<typename Comp>
-  VectorXf operator()(Comp *image, unsigned stride= 1) const;
+  VectorXf operator()(Comp *image, int stride= 1) const;
 
   /// Map from rectangular coordinates of filled pixel to offset of same
   /// coordinates in value returned by coords().
@@ -336,9 +348,9 @@ void Fill::initCoords(ArrayX2i const &coords) {
   }
   coords_.conservativeResize(j, 2);
   // Second, build coordsMap_.
-  ArrayXXi     cmap= ArrayXXi::Constant(hght_, wdth_, -1);
-  auto const   lin = coords_.col(0) + coords_.col(1) * hght_;
-  Map<ArrayXi> m(&cmap(0, 0), hght_ * wdth_, 1);
+  ArrayXXi            cmap= ArrayXXi::Constant(hght_, wdth_, -1);
+  auto const          lin = coords_.col(0) + coords_.col(1) * hght_;
+  Eigen::Map<ArrayXi> m(&cmap(0, 0), hght_ * wdth_, 1);
   m(lin)    = ArrayXi::LinSpaced(coords_.rows(), 0, coords_.rows() - 1);
   coordsMap_= cmap;
 }
@@ -363,7 +375,7 @@ Fill::Fill(ArrayX2i const &coords, unsigned width, unsigned height, bool cg):
 
 
 template<typename Comp>
-ArrayX2i Fill::findCoords(Comp *m, unsigned w, unsigned h, unsigned stride) {
+ArrayX2i Fill::findCoords(Comp *m, unsigned w, unsigned h, int stride) {
   Comp const zero(0);
   // Width (pixels) of edge.
   constexpr unsigned ew= 1;
@@ -388,17 +400,11 @@ ArrayX2i Fill::findCoords(Comp *m, unsigned w, unsigned h, unsigned stride) {
 
 
 template<typename Comp>
-Fill::Fill(
-      Comp *mask, unsigned width, unsigned height, unsigned stride, bool cg):
+Fill::Fill(Comp *mask, unsigned width, unsigned height, int stride, bool cg):
     Fill(findCoords(mask, width, height, stride), width, height, cg) {}
 
 
-template<typename Comp>
-VectorXf Fill::operator()(Comp *image, unsigned stride) const {
-  using Image = Array<Comp, Dynamic, 1>;
-  using Stride= Eigen::Stride<1, Dynamic>;
-  using Map   = Eigen::Map<Image, Unaligned, Stride>;
-  Map im(image, hght_ * wdth_, 1, Stride(1, stride));
+template<typename Map> VectorXf Fill::solve(Map const &im) const {
   // First, calculate 1 for encoded offset; 0 for filled pixel.
   auto const fL= (lrtb_.col(0) < 0);
   auto const fR= (lrtb_.col(1) < 0);
@@ -416,36 +422,89 @@ VectorXf Fill::operator()(Comp *image, unsigned stride) const {
   auto const bB= fB.cast<float>() * im(iB).template cast<float>();
   // Now, pull pixel-data into b by evaluated vectorized expression.
   VectorXf const b= bL + bR + bT + bB;
-  // Find answer.
-  VectorXf x;
   if(cg_) {
-    x= CG_.solve(b);
+    return CG_.solve(b);
   } else {
-    x= A_->solve(b);
+    return A_->solve(b);
   }
+}
+
+
+template<typename Map>
+void Fill::copySolutionBackIntoImage(Map &im, VectorXf const &x) const {
+  using Comp                = typename Map::CompType;
+  constexpr bool is_integral= is_integral_v<Comp>;
+  // Image is row-major.
+  auto const ii= /*col*/ coords_.col(0) * wdth_ + /*row*/ coords_.col(1);
+  if constexpr(is_integral) {
+    if constexpr(is_unsigned_v<Comp>) {
+      im(ii)= (x.array() + 0.5f).cast<Comp>();
+    } else {
+      auto const neg= (x.array() < 0.0f).cast<Comp>();
+      auto const rup= (x.array() + 0.5f).cast<Comp>();
+      auto const rdn= (x.array() - 0.5f).cast<Comp>();
+      // Round in correct direction.
+      im(ii)= neg * rdn + (Comp(1) - neg) * rup;
+    }
+  } else {
+    if constexpr(is_same_v<float, Comp>) {
+      im(ii)= x.array();
+    } else {
+      im(ii)= x.array().cast<Comp>();
+    }
+  }
+}
+
+
+/// Type to which single-component image is mapped.
+///
+/// Single-component image *appears* as if it were of this type, regardless of
+/// how component is stored relative to other components in same image.
+///
+/// \tparam Comp  Type of each color-component in image.
+template<typename Comp> using Image= Array<Comp, Dynamic, 1>;
+
+
+/// Allow run-time (Eigen::Dynamic) stride in map for single-component,
+/// row-major image.
+using ImageStride= Eigen::Stride<1, Dynamic>;
+
+
+/// Descend from Eigen::Map to provide access to type of image-component.
+/// \tparam Comp  Type of each color-component in image.
+template<typename Comp>
+struct Map: public Eigen::Map<Image<Comp>, Unaligned, ImageStride> {
+  /// Type of ancestor.
+  using P= Eigen::Map<Image<Comp>, Unaligned, ImageStride>;
+
+  /// Type of each color-component in image.
+  using CompType= Comp;
+
+  /// Initialize ancestor.
+  ///
+  /// \param image   Pointer to first component in single-component image.
+  /// \param rows    Number of rows    in mapped image.
+  /// \param cols    Number of columns in mapped image.
+  ///
+  /// \param stride  Number of instances of `Comp` between consecutive
+  ///                components in single-component image.
+  ///
+  Map(Comp *image, unsigned rows, unsigned cols, ImageStride const &stride):
+      P(image, rows, cols, stride) {}
+};
+
+
+template<typename Comp>
+VectorXf Fill::operator()(Comp *image, int stride) const {
+  Map im(image, int(hght_ * wdth_), 1, ImageStride(1, stride));
+  // Find solution.
+  VectorXf const x= solve(im);
+  // If possible, copy solution back into original image.
   constexpr bool is_const   = is_const_v<Comp>;
   constexpr bool is_integral= is_integral_v<Comp>;
   constexpr bool is_fp      = is_floating_point_v<Comp>;
   if constexpr(!is_const && (is_integral || is_fp)) {
-    // Image is row-major.
-    auto const ii= /*col*/ coords_.col(0) * wdth_ + /*row*/ coords_.col(1);
-    if constexpr(is_integral) {
-      if constexpr(is_unsigned_v<Comp>) {
-        im(ii)= (x.array() + 0.5f).cast<Comp>();
-      } else {
-        auto const neg= (x.array() < 0.0f).cast<Comp>();
-        auto const rup= (x.array() + 0.5f).cast<Comp>();
-        auto const rdn= (x.array() - 0.5f).cast<Comp>();
-        // Round in correct direction.
-        im(ii)= neg * rdn + (Comp(1) - neg) * rup;
-      }
-    } else {
-      if constexpr(is_same_v<float, Comp>) {
-        im(ii)= x.array();
-      } else {
-        im(ii)= x.array().cast<Comp>();
-      }
-    }
+    copySolutionBackIntoImage(im, x);
   }
   return x;
 }
