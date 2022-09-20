@@ -253,13 +253,15 @@ public:
   ///
   ArrayXXi const &coordsMap() const { return coordsMap_; }
 
-  /// Matrix with four columns and with each row corresponding to different
-  /// filled pixel, such that offset `rp` of row is offset in value returned by
-  /// coords() for filled pixel `p`; each column corresponds to neighbor `n`
-  /// (left, right, top, and bottom, respectively) of `p`; if `n` be in
-  /// boundary (if `n` be not filled), element `e` of returned matrix encodes
-  /// *row-major* linear offset `i` of `n` in image as `e = -1 - i`; if `n` be
-  /// filled, `e = rn`, where `rn` is offset of coordinates of `n` in value
+  /// Matrix with each row corresponding to different filled pixel `p` and with
+  /// four columns, each corresponding to different neighbor `n` of `p`.  Row
+  /// `r` in returned matrix corresponds to coordinates at same row in matrix
+  /// returned by coords(); each column in matrix returned by `%lrtb()`
+  /// corresponds to neighbor (left, right, top, and bottom, respectively) `n`
+  /// of `p`.  On one hand, if `n` be in boundary (if `n` be not filled), then
+  /// element `e` of returned matrix encodes row-major linear image-offset `i`
+  /// of `n` as `e = -1 - i`; on other hand, if `n` itself be filled pixel,
+  /// then `e = rn`, where `rn` is row-offset of coordinates of `n` in matrix
   /// returned by coords().
   ///
   /// \return  Matrix with four columns to encode information about each
