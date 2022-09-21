@@ -111,14 +111,15 @@ or equal to $W$; similarly, for $H_0$ and $H$.
 
 Construct every successive, binned image of
 $M_0.$  First $M_1$, which has $W_1=W_0/2$, has
-$H_1=H_0/2$, and is $2 \times 2$-binned; then
-$M_2$, $4 \times 4$; $M_3$, $8 \times 8$; etc.
-In each case, a superpixel contains the sum of
-the four corresponding pixel-values in the mask
-at the next higher stage of resolution.
-Construct $M_1, M_2, \ldots, M_k$, where $k$ is
-the largest value such that both $W_k \geq 4$
-and $H_k \geq 4$.
+$H_1=H_0/2$, and is binned into superpixels of
+$2 \times 2$ pixels each; then $M_2$, $4 \times
+4$; $M_3$, $8 \times 8$; etc.  In each case, a
+superpixel contains the sum of the four
+corresponding pixel-values in the mask at the
+next higher stage of resolution.  Construct
+$M_1, M_2, \ldots, M_k$, where $k$ is the
+largest value such that both $W_k \geq 4$ and
+$H_k \geq 4$.
 
 After construction of the binned mask-images,
 consider them, beginning with $M_k,$ in reverse
