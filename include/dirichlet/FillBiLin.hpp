@@ -5,19 +5,12 @@
 #ifndef DIRICHLET_FILL_BILIN_HPP
 #define DIRICHLET_FILL_BILIN_HPP
 
-#include "eigen3/Eigen/Dense" // Array, Dynamic, Map, RowMajor, Stride, etc.
-#include "impl/pow2.hpp"      // pow2()
+#include "eigen3/Eigen/Dense" // ArrayXXi
 
 namespace dirichlet {
 
 
-using Eigen::Array;
 using Eigen::ArrayXXi;
-using Eigen::Dynamic;
-using Eigen::Map;
-using Eigen::RowMajor;
-using Eigen::seq;
-using Eigen::Unaligned;
 
 
 /// Fill holes in image by approximately solving Dirichlet-problem for
@@ -72,46 +65,14 @@ public:
 // Implementation.
 // ---------------
 
-#include <iostream>    // cout, endl
-#include <type_traits> // remove_const
+#include "impl/Image.hpp" // Image, ImageMap
+#include "impl/pow2.hpp"  // pow2()
+#include <iostream>       // cout, endl
 
 namespace dirichlet {
 
 
-using std::remove_const_t;
-
-
-template<typename P> struct ImageHelper {
-  using Type= Array<P, Dynamic, Dynamic, RowMajor>;
-};
-
-
-template<typename P> struct ImageHelper<P const> {
-  using Type= typename ImageHelper<P>::Type const;
-};
-
-
-/// Type of logical, single-component image.
-///
-/// "Logical" is used because a single-component image might have
-/// a non-compact layout in memory, with non-unit stride.
-///
-/// \tparam P  Type of each pixel-value in image.
-///
-template<typename P> using Image= typename ImageHelper<P>::Type;
-
-
-/// Allow dynamic inner stride.
-struct Stride: public Eigen::Stride<1, Dynamic> {
-  /// Initialize inner stride.
-  /// \param s  Inner stride.
-  Stride(int s): Eigen::Stride<1, Dynamic>(1, s) {}
-};
-
-
-/// Map used to present image as Image<P>.
-/// \tparam P  Type of each pixel-value in image.
-template<typename P> using ImageMap= Map<Image<P>, Unaligned, Stride>;
+using Eigen::seq;
 
 
 template<typename P> ArrayXXi FillBiLin::extendMask(P const *msk, int stride) {
@@ -119,7 +80,7 @@ template<typename P> ArrayXXi FillBiLin::extendMask(P const *msk, int stride) {
   // Allocate space for extended mask.
   ArrayXXi extendedMask= ArrayXXi::Zero(pow2(h_), pow2(w_));
   // Map mask to logical image.
-  ImageMap<P const> mask(msk, h_, w_, Stride(stride));
+  impl::ImageMap<P const> mask(msk, h_, w_, impl::Stride(stride));
   // Initialize range of rows and columns for copying.
   auto const rseq= seq(0, h_ - 1);
   auto const cseq= seq(0, w_ - 1);
