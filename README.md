@@ -158,21 +158,28 @@ region of pixels to be filled.
 
 ### Bilinear Interpolation
 
-After the problem is solved, the edges and
-interior of each interpolable superpixel must be
-filled with the values obtained by bilinearly
-interpolating the corner-values, which were
-solved for.
+After the problem is solved, the interior of
+each interpolable superpixel must be filled with
+the values obtained by bilinearly interpolating
+the corner-values, which were solved for.  (The
+edge along the side of each superpixel does not
+need to be interpolated because the values were
+solved for, but those values are the same as
+would be obtained by interpolation because the
+one-dimensional Laplacian was used along the
+edge.)
 
 Because the bilinear interpolant is a
 low-polynimal-order solution to Laplace's
 equation over the coordinates of the grid, what
 this approach does is, while solving Laplace's
-equation, to mandate a low-order solution over
-large portions of the deep interior of the
-filled region.  But this is precisely where the
-solution is likely to be of low order anyway,
-and so a large increase in speed can be obtained
+equation globally for the corners of
+superpixels, to mandate a low-order solution
+over interior of eac superpixel.  But if
+superpixels reside only in the deep interior of
+the filled region, this is precisely where the
+solution is likely to be of low order anyway.
+So a large increase in speed can be obtained
 with minimal error relative to the full
 solution.
 
