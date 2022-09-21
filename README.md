@@ -138,8 +138,8 @@ solved for with the one-dimensional Laplacian
 oriented along the edge between the corners.
 Mark $p$'s interior pixels in the unbinned image
 as to be interpolated from the corners.  Mark
-every mask-pixel corresponding to $p$ at every
-lower binning as zero.
+every mask-pixel corresponding to $p$ in
+$M_{i-1}, M_{i-2}, \ldots, M_2$ as zero.
 
 Mark every remaining pixel in unbinned mask
 according to its being and interior pixel or
