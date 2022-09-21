@@ -8,24 +8,26 @@ LDLIBS:= -lCatch2Main -lCatch2
 
 .PHONY: all clean
 
-all : FillTest
+all: FillExperimentTest
 
-FillTest : FillTest.o
+FillTest: FillTest.o
 
-clean :
+FillExperimentTest: FillExperimentTest.o
+
+clean:
 	@rm -frv .d
 	@rm -fv *.o
 	@rm -fv utest
 
 # http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
-SRCS:= FillTest.cpp
+SRCS:= FillTest.cpp FillExperimentTest.cpp
 DEPDIR= .d
 $(shell mkdir -p $(DEPDIR) >/dev/null)
 DEPFLAGS= -MT $@ -MMD -MP -MF $(DEPDIR)/$*.Td
 COMPILE.cc= $(CXX) $(DEPFLAGS) $(CXXFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
 POSTCOMPILE= @mv -f $(DEPDIR)/$*.Td $(DEPDIR)/$*.d && touch $@
-%.o : %.cpp
-%.o : %.cpp $(DEPDIR)/%.d
+%.o: %.cpp
+%.o: %.cpp $(DEPDIR)/%.d
 	$(COMPILE.cc) $(OUTPUT_OPTION) $<
 	$(POSTCOMPILE)
 $(DEPDIR)/%.d: ;
