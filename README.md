@@ -159,11 +159,11 @@ region of pixels to be filled.
 ### Bilinear Interpolation
 
 After the problem is solved, the interior of
-each interpolable superpixel must be filled with
-the values obtained by bilinearly interpolating
-the corner-values, which were solved for.  (The
-edge along the side of each superpixel does not
-need to be interpolated because the values were
+each superpixel must be filled with the values
+obtained by bilinearly interpolating the
+corner-values, which were solved for.  (The edge
+along the side of each superpixel does not need
+to be interpolated because the values were
 solved for, but those values are the same as
 would be obtained by interpolation because the
 one-dimensional Laplacian was used along the
