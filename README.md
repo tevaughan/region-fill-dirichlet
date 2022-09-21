@@ -175,7 +175,7 @@ equation over the coordinates of the grid, what
 this approach does is, while solving Laplace's
 equation globally for the corners of
 superpixels, to mandate a low-order solution
-over interior of eac superpixel.  But if
+over interior of each superpixel.  But if
 superpixels reside only in the deep interior of
 the filled region, this is precisely where the
 solution is likely to be of low order anyway.
