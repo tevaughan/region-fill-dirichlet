@@ -141,9 +141,9 @@ as to be interpolated from the corners.  Mark
 every mask-pixel corresponding to $p$ in
 $M_{i-1}, M_{i-2}, \ldots, M_2$ as zero.
 
-Mark every remaining pixel in unbinned mask
-according to its being and interior pixel or
-next to a boundary.
+Mark every remaining pixel in unbinned mask as
+usual for ordinary solution to Laplace's
+equation.
 
 ### Prepare Linear Model
 
