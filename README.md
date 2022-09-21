@@ -63,22 +63,38 @@ in on the central, filled circle:
 
 ## Idea for Yet More Speed in Future Version
 
-In a large, filled region, the pixel-values are
-very smoothly distributed across space in the
-vicinity of every filled pixel that is farther
-than a handfull of pixels from the border of the
-filled region.  Because of the underlying
-geometry of the pixel-grid, an approach based on
-the bilinear interpolation over a square group
-of pixels seems appropriate.  The bilinear
-interpolant is natural within the square.
-Although the bilinear interpolant is linear
-along each coordinate-axis, it is quadratic
-along any other direction.  The bilinear
-interpolant is a harmonic function that
-satisfies Laplace's equation, which is what
-constrains the values at the corner of the
-square.
+Suppose that "deep" and "shallow" are taken to
+refer to proximity to the boundary of the region
+to be filled.  The deepest pixels are the ones
+farthest from the boundary of the region to be
+filled, and the shallowest are the ones nearest
+the boundary.
+
+In a large region filled according to Laplace's
+equation, the pixel-values are most smoothly
+distributed across deepest portions of the
+region.
+
+Because of the underlying geometry of the
+pixel-grid, an approach based on the bilinear
+interpolation over a square group of pixels
+seems natural.  Although the bilinear
+interpolant is linear along each
+coordinate-axis, it is quadratic along any other
+direction.  Anyway, the bilinear interpolant
+satisfies Laplace's equation.  So, if the
+corners of the square participate in a global
+solution to Laplace's equation, then the
+interpolant provides a local solution that is at
+least continuous with the global one.
+
+What I propose is a hierarchical approach, in
+which the deepest portions of the region to be
+filled have the largest interpolated squares,
+shallower portions have smaller interpolated
+squares, and, in the shallowest portions, every
+pixel participates in the global, finite-element
+solution to Laplace's equation.
 
 ### Prepare Mask
 
@@ -98,67 +114,50 @@ $H_0$ and $H$.
 
 ### Find Squares Over Which To Interpolate
 
-Consider every successive, binned image of
+Construct every successive, binned image of
 $M_0.$  First $M_1$, which has $W_1=W_0/2$, has
 $H_1=H_0/2$, and is $2 \times 2$-binned; then
 $M_2$, $4 \times 4$; $M_3$, $8 \times 8$; etc.
 In each case, a superpixel contains the sum of
 the four corresponding pixel-values in the mask
-at the next higher stage of resolution.  Find
-the greatest $N$ such that $M_N$ has at least
-one interpolable superpixel, one whose value is
-$2^{2N}$; that is, in $M_N$ at least one
-superpixel whose every corresponding pixel in
-$M'$ is 1, so that the superpixel is completely
-within the region to be filled and deeper within
-the region than the margin $m$.
+at the next higher stage of resolution.
+Construct $M_1, M_2, \ldots, M_k$, where $k$ is
+the largest value such that both $W_k \geq 4$
+and $H_k \geq 4$.
 
-If $N>1$, then, for each such superpixel in
-$M_N$, let the four corresponding corner-pixels
-in $M'$ remain set to 1, but set the other
-$2^{2N} - 4$ corresponding pixels in $M'$ to
-zero.  Keep track of each interpolable
-superpixel, so that pixels on its boundary in
-the original image can contribute properly to
-the coefficients of the sparse, square matrix
-used in the solution and so that, after the
-solution is obtained, the superpixel's
-corresponding pixels in the original image
-(other than the corner pixels) can be filled by
-bilinear interpolation of the corners. Also, set
-all of the corresponding pixels at the
-intermediate resolutions to zero.
+After construction of the binned mask-images,
+consider them, beginning with $M_k,$ in reverse
+order.
 
-Do the same thing in $M_{N-1}$ for each
-interpolable superpixel, whose value is
-$2^{2[N-1]}$, in $M_{N-2}$ for each with value
-$2^{2[N-2]}$, etc., and concluding with the same
-treatment in $M_2$ for each with value 16.
+For each image $M_i$ in $M_k, M_{k-1}, \ldots,
+M_2,$ find every pixel $p$ whose value is
+$2^{2i}$ and for which every one of $p$'s four
+neighbors also has value $2^{2i}$.  Record the
+corner-pixels of $p$ in the unbinned image as to
+be solved for with the ordinary, two-dimensional
+Laplacian.  Record the edge-pixels along each
+horizontal or vertical line connecting the
+corner-pixels as to be solved for with the
+one-dimensional Laplacian.  Mark the interior
+pixels in the unbinned image as to be
+interpolated from the corners.  Mark every
+mask-pixel corresponding to $p$ at every lower
+binning as zero.
+
+Mark every remaining pixel in unbinned mask
+according to its being and interior pixel or
+next to a boundary.
 
 ### Prepare Linear Model
 
 When the size of the region to be filled is
-larger than, say, $16 \times 16$ pixels, the
-elimination of all but the four corner pixels
-from each interpolable superpixel drastically
-reduces the size of the linear problem.  The
-remaining square matrix is still sparse,
-especially as the margin $m$ increases, but the
-matrix does become denser.  Whenever a lone
-pixel $p$ in the linear system lie, say, to the
-left of the border of an interpolable
-superpixel, the contribution from the
-border-pixel is computed as the bilinear
-interpolation of the two corner-pixels that
-bound that border.  So $p$ is connected not just
-to a single value on the right but to a properly
-weighted pair on the right.  Effects like this
-increase the density of the problem.
-
-However, the time to factor the matrix and to
-render the solution should be greatly reduced
-for any sufficiently large region of pixels to
-be filled.
+larger than, say, $128 \times 128$ pixels, the
+elimination of the interior pixels from each
+interpolable superpixel drastically reduces the
+size of the linear problem.  The time to factor
+the matrix and to render the solution should be
+greatly reduced for any sufficiently large
+region of pixels to be filled.
 
 ### Bilinear Interpolation
 
