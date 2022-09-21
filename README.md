@@ -134,7 +134,8 @@ the unbinned image as to be solved for with the
 ordinary, two-dimensional Laplacian.  Record the
 edge-pixels along each horizontal or vertical
 line connecting the corner-pixels as to be
-solved for with the one-dimensional Laplacian.
+solved for with the one-dimensional Laplacian
+oriented along the edge between the corners.
 Mark the interior pixels in the unbinned image
 as to be interpolated from the corners.  Mark
 every mask-pixel corresponding to $p$ at every
