@@ -98,19 +98,14 @@ solution to Laplace's equation.
 
 ### Prepare Mask
 
-Consider a mask $M$, which is the same size
-$W \times H$ as the original image but with
-value of 1 at each pixel to be filled and 0 at
-each pixel not to be filled.  Make a new mask
-$M'$ by copying $M$ and then resetting to zero
-every pixel that lies within some marginal
-distance $m$ pixels from a 0 along either the
-row-direction or the column-direction.  Extend
-$M'$ to a larger mask $M_0$ by appending zeros
-toward the lower right of $M'$ until the width
-$W_0$ of $M_0$ is the smallest power of two
-greater than or equal to $W$; similarly, for
-$H_0$ and $H$.
+Consider a mask $M$, which is the same size $W
+\times H$ as the original image but with value
+of 1 at each pixel to be filled and 0 at each
+pixel not to be filled.  Extend $M$ to a larger
+mask $M_0$ by appending zeros toward the lower
+right of $M$ until the width $W_0$ of $M_0$ is
+the smallest power of two greater than or equal
+to $W$; similarly, for $H_0$ and $H$.
 
 ### Find Squares Over Which To Interpolate
 
