@@ -125,20 +125,20 @@ After construction of the binned mask-images,
 consider them, beginning with $M_k,$ in reverse
 order.
 
-For each image $M_i$ in $M_k, M_{k-1}, \ldots,
-M_2,$ find every pixel $p$ whose value is
-$2^{2i}$ and for which every one of $p$'s four
-neighbors also has value $2^{2i}$.  Record the
-corner-pixels of $p$ in the unbinned image as to
-be solved for with the ordinary, two-dimensional
-Laplacian.  Record the edge-pixels along each
-horizontal or vertical line connecting the
-corner-pixels as to be solved for with the
-one-dimensional Laplacian.  Mark the interior
-pixels in the unbinned image as to be
-interpolated from the corners.  Mark every
-mask-pixel corresponding to $p$ at every lower
-binning as zero.
+For each image $M_i$ in
+$M_k, M_{k-1}, \ldots, M_2,$ find every pixel
+$p$ whose value is $2^{2i}$ and for which every
+one of $p$'s four neighbors also has value
+$2^{2i}$.  Record the corner-pixels of $p$ in
+the unbinned image as to be solved for with the
+ordinary, two-dimensional Laplacian.  Record the
+edge-pixels along each horizontal or vertical
+line connecting the corner-pixels as to be
+solved for with the one-dimensional Laplacian.
+Mark the interior pixels in the unbinned image
+as to be interpolated from the corners.  Mark
+every mask-pixel corresponding to $p$ at every
+lower binning as zero.
 
 Mark every remaining pixel in unbinned mask
 according to its being and interior pixel or
