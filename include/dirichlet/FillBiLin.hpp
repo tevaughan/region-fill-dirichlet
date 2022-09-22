@@ -65,14 +65,16 @@ public:
 // Implementation.
 // ---------------
 
-#include "impl/Image.hpp" // Image, ImageMap
-#include "impl/pow2.hpp"  // pow2()
-#include <iostream>       // cout, endl
+#include "impl/Image.hpp"    // Image, ImageMap
+#include "impl/binMasks.hpp" // binMasks(), vector
+#include "impl/pow2.hpp"     // pow2()
+#include <iostream>          // cout, endl
 
 namespace dirichlet {
 
 
 using Eigen::seq;
+using std::vector;
 
 
 template<typename P> ArrayXXi FillBiLin::extendMask(P const *msk, int stride) {
@@ -93,11 +95,13 @@ template<typename P> ArrayXXi FillBiLin::extendMask(P const *msk, int stride) {
 
 template<typename P>
 FillBiLin::FillBiLin(P const *msk, int w, int h, int stride): w_(w), h_(h) {
-  ArrayXXi const m0= extendMask(msk, stride);
+  ArrayXXi const   m0= extendMask(msk, stride);
+  vector<ArrayXXi> m = impl::binMasks(m0);
   std::cout << "w=" << w << " "
             << "h=" << h << " "
             << "w0=" << m0.cols() << " "
-            << "h0=" << m0.rows() << std::endl;
+            << "h0=" << m0.rows() << " "
+            << "numMasks=" << m.size() << std::endl;
 }
 
 
