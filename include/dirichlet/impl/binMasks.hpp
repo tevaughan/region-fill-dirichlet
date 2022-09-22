@@ -8,7 +8,7 @@
 #ifndef DIRICHLET_IMPL_BIN_MASKS_HPP
 #define DIRICHLET_IMPL_BIN_MASKS_HPP
 
-#include "eigen3/Eigen/Dense" // ArrayXXi, seq
+#include <eigen3/Eigen/Dense> // ArrayXXi, seq
 #include <vector>             // vector
 
 namespace dirichlet::impl {

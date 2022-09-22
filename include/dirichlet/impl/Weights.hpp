@@ -90,6 +90,12 @@ public:
 
   /// Expression-template for center weight.
   auto cen() const { return weight(CEN); }
+
+  /// Height of image.
+  int h() const { return h_; }
+
+  /// Width of image.
+  int w() const { return w_; }
 };
 
 
