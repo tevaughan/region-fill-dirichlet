@@ -5,8 +5,8 @@
 #ifndef DIRICHLET_FILL_BILIN_HPP
 #define DIRICHLET_FILL_BILIN_HPP
 
-#include "impl/Weights.hpp"   // Weights
-#include <eigen3/Eigen/Dense> // ArrayX3, ArrayXX, seq
+#include "impl/Weights.hpp" // Weights
+#include "impl/bin2x2.hpp"  // bin2x2()
 
 namespace dirichlet {
 
@@ -73,19 +73,12 @@ class FillBiLin {
   /// \return     Expression-template for end-result at next lower resolution.
   ///
   template<typename T> auto binMask(T const &hi) {
-    int const r= hi.rows();
-    int const c= hi.cols();
-    if(r != r / 2 * 2) throw "number of rows not even";
-    if(c != c / 2 * 2) throw "number of cols not even";
-    auto const lft= seq(0, c - 2, 2);
-    auto const rgt= seq(1, c - 1, 2);
-    auto const top= seq(0, r - 2, 2);
-    auto const bot= seq(1, r - 1, 2);
-    auto lo= hi(lft, top) && hi(lft, bot) && hi(rgt, top) && hi(rgt, bot);
+    auto lo= bin2x2(hi);
     // TBS:
     // - Define array loValid, with each element set true for corresponding
     //   square that is valid at current level of binning.
-    if(r >= 8 && c >= 8 /* && at least one element true in loValid */) {
+    // - Make sure that 8 is right.
+    if(lo.rows() >= 8 && lo.cols() >= 8 /* && any true in loValid */) {
       auto const lowerValid= binMask(lo);
       // TBS:
       // - In loValid, set false each element with corresponding square
