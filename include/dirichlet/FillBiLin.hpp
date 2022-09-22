@@ -10,7 +10,7 @@
 namespace dirichlet {
 
 
-using Eigen::ArrayXXi;
+using Eigen::ArrayXX;
 
 
 /// Fill holes in image by approximately solving Dirichlet-problem for
@@ -33,12 +33,13 @@ class FillBiLin {
   int w_; ///< Width  of image.
   int h_; ///< Height of image.
 
-  /// Extend mask so that it is power of two along each dimension.
+  /// Extend mask with with zeros so that it is power of two along each
+  /// dimension, and convert to array of boolean.
   /// \tparam P       Type of each pixel-value in mask.
   /// \param  msk     Pointer to first pixel of row-major mask-image.
   /// \param  stride  Pointer-increments between consecutive pixels.
   /// \return         Extended mask.
-  template<typename P> ArrayXXi extendMask(P const *msk, int stride);
+  template<typename P> ArrayXX<bool> extendMask(P const *msk, int stride);
 
 public:
   /// Set up linear problem by analyzing mask.
@@ -77,17 +78,18 @@ using Eigen::seq;
 using std::vector;
 
 
-template<typename P> ArrayXXi FillBiLin::extendMask(P const *msk, int stride) {
+template<typename P>
+ArrayXX<bool> FillBiLin::extendMask(P const *msk, int stride) {
   using impl::pow2;
   // Allocate space for extended mask.
-  ArrayXXi extendedMask= ArrayXXi::Zero(pow2(h_), pow2(w_));
+  ArrayXX<bool> extendedMask= ArrayXX<bool>::Zero(pow2(h_), pow2(w_));
   // Map mask to logical image.
   impl::ImageMap<P const> mask(msk, h_, w_, impl::Stride(stride));
   // Initialize range of rows and columns for copying.
   auto const rseq= seq(0, h_ - 1);
   auto const cseq= seq(0, w_ - 1);
   // Copy original mask into extended mask, and convert to ones and zeros.
-  extendedMask(rseq, cseq)= (mask != P(0)).template cast<int>();
+  extendedMask(rseq, cseq)= (mask != P(0));
   // Return extended mask (copy of handle elided by C++-17).
   return extendedMask;
 }
@@ -95,8 +97,8 @@ template<typename P> ArrayXXi FillBiLin::extendMask(P const *msk, int stride) {
 
 template<typename P>
 FillBiLin::FillBiLin(P const *msk, int w, int h, int stride): w_(w), h_(h) {
-  ArrayXXi const   m0= extendMask(msk, stride);
-  vector<ArrayXXi> m = impl::binMasks(m0);
+  ArrayXX<bool> const   m0= extendMask(msk, stride);
+  vector<ArrayXX<bool>> m = impl::binMasks(m0);
   std::cout << "w=" << w << " "
             << "h=" << h << " "
             << "w0=" << m0.cols() << " "

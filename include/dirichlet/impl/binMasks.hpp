@@ -14,13 +14,13 @@
 namespace dirichlet::impl {
 
 
-using Eigen::ArrayXXi;
+using Eigen::ArrayXX;
 using Eigen::seq;
 using std::vector;
 
 
-/// Perform binning on higher-resolution, power-of-two-sized mask `hi` so
-/// that each pixel in lower-resolution returned mask is sum of four
+/// Perform binning on higher-resolution, power-of-two-sized mask `hi` so that
+/// each pixel in lower-resolution returned mask is logical AND of four
 /// corresponding pixels in `hi`.
 ///
 /// \param hi  Higher-resolution mask.
@@ -36,13 +36,13 @@ template<typename T> auto binMask(T const &hi) {
   auto const rgt= seq(1, hi.cols() - 1, 2);
   auto const top= seq(0, hi.rows() - 2, 2);
   auto const bot= seq(1, hi.rows() - 1, 2);
-  return hi(lft, top) + hi(lft, bot) + hi(rgt, top) + hi(rgt, bot);
+  return hi(lft, top) && hi(lft, bot) && hi(rgt, top) && hi(rgt, bot);
 }
 
 
 /// Perform binning on power-of-two mask `m0` so that, at each level of
-/// binning, each pixel is sum of four corresponding pixels at next higher
-/// level of resolution.
+/// binning, each pixel is logical AND of four corresponding pixels at next
+/// higher level of resolution.
 ///
 /// First element is highest-resolution (4x4-binned) mask in list, then lower
 /// resolution (8x8), even lower resolution (16x16), etc.  Last element is at
@@ -52,14 +52,14 @@ template<typename T> auto binMask(T const &hi) {
 ///
 /// \param m0  Original, power-of-two-extended, unbinned mask.
 /// \return    List of power-of-two-binned versions of `m0`.
-vector<ArrayXXi> binMasks(ArrayXXi const &m0) {
-  vector<ArrayXXi> r;
+vector<ArrayXX<bool>> binMasks(ArrayXX<bool> const &m0) {
+  vector<ArrayXX<bool>> r;
   if(m0.rows() < 8 || m0.cols() < 8) return r;
   auto const m1= binMask(m0);
   if(m1.rows() < 8 || m1.cols() < 8) return r;
   r.push_back(binMask(m1)); // m2
   while(true) {
-    ArrayXXi const &last= r[r.size() - 1];
+    ArrayXX<bool> const &last= r[r.size() - 1];
     if(last.rows() < 8 || last.cols() < 8) break;
     r.push_back(binMask(last)); // mi
   }
