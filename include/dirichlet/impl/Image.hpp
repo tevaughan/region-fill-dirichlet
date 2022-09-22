@@ -1,15 +1,15 @@
-/// \file       include/dirichlet/impl/ImageHelper.hpp
+/// \file       include/dirichlet/impl/Image.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
 ///
 /// \brief      Definition of
 ///               dirichlet::impl::ImageHelper,
 ///               dirichlet::impl::Image,
-///               dirichlet::impl::Stride,
 ///               dirichlet::impl::ImageMap.
 
 #ifndef DIRICHLET_IMPL_IMAGE_HPP
 #define DIRICHLET_IMPL_IMAGE_HPP
 
+#include "Stride.hpp"         // Stride
 #include <eigen3/Eigen/Dense> // Array, Dynamic, Map, RowMajor, Unaligned
 
 namespace dirichlet::impl {
@@ -49,14 +49,6 @@ template<typename P> struct ImageHelper<P const> {
 /// \tparam P  Type of each pixel-value in image.
 ///
 template<typename P> using Image= typename ImageHelper<P>::Type;
-
-
-/// Allow dynamic inner stride.
-struct Stride: public Eigen::Stride<1, Dynamic> {
-  /// Initialize inner stride.
-  /// \param s  Inner stride.
-  Stride(int s): Eigen::Stride<1, Dynamic>(1, s) {}
-};
 
 
 /// Map used to present image as Image<P>.
