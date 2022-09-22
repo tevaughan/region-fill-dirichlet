@@ -5,13 +5,17 @@
 #ifndef DIRICHLET_FILL_BILIN_HPP
 #define DIRICHLET_FILL_BILIN_HPP
 
-#include "impl/Weights.hpp" // Weights
-#include "impl/bin2x2.hpp"  // bin2x2()
+#include "impl/Weights.hpp"     // Weights
+#include "impl/bin2x2.hpp"      // bin2x2()
+#include "impl/unbin2x2.hpp"    // unbin2x2()
+#include "impl/validSquare.hpp" // validSquare()
 
 namespace dirichlet {
 
 
+using Eigen::Array3;
 using Eigen::ArrayX3;
+using Eigen::ArrayXi;
 using Eigen::ArrayXX;
 using Eigen::seq;
 
@@ -61,6 +65,13 @@ class FillBiLin {
   /// \return         Extended mask.
   template<typename P> ArrayXX<bool> extendMask(P const *msk, int stride);
 
+  /// Modify `weights_` for corners and edges of square to interpolate, add
+  /// entry to `corners_`, and increment `numSquares_`.
+  /// \param r   Row of valid pixel at binning-factor bf in binMask().
+  /// \param c   Col of valid pixel at binning-vactor bf in binMask().
+  /// \param bf  Absolute binning factor relative to unbinned mask.
+  void registerSquare(int r, int c, int bf);
+
   /// Recursive function that performs binning on higher-resolution mask `hi`,
   /// detects valid squares at current binning level, calls itself (if enough
   /// pixels at current binning), modifies `weights_` for corners and edges of
@@ -70,24 +81,29 @@ class FillBiLin {
   ///
   /// \tparam T   Type of array or expression-template for array.
   /// \param  hi  Higher-resolution mask.
+  /// \param  bf  Absolute binning factor of lo relative to unbinned mask.
   /// \return     Expression-template for end-result at next lower resolution.
   ///
-  template<typename T> auto binMask(T const &hi) {
-    auto lo= bin2x2(hi);
-    // TBS:
-    // - Define array loValid, with each element set true for corresponding
-    //   square that is valid at current level of binning.
-    // - Make sure that 8 is right.
-    if(lo.rows() >= 8 && lo.cols() >= 8 /* && any true in loValid */) {
-      auto const lowerValid= binMask(lo);
-      // TBS:
-      // - In loValid, set false each element with corresponding square
-      //   overlapped by valid square in lowerValid.
+  template<typename T> auto binMask(T const &hi, int bf) {
+    // Bin to current level.
+    auto lo= impl::bin2x2(hi);
+    // Identify interpolable squares at current level.
+    auto loValid= impl::validSquare(lo);
+    // Count number of interpolable squares at current level.
+    int const sum= loValid.template cast<int>().sum();
+    // Make recursive call only if enough interpolable squares.
+    if(lo.rows() >= 8 && lo.cols() >= 8 && sum >= 4) {
+      // Make recursive call.
+      auto const lowerValid= binMask(lo, bf * 2);
+      // Eliminate from loValid any overlap in lowerValid.
+      loValid= loValid && !unbin2x2(lowerValid);
     }
-    // TBS:
-    // - For each true element in loValid, mark corners and edges appropriately
-    //   in weights_, increment numSquares_, and add row to corners_.
-    // - Return loValid.
+    for(int c= 0; c < loValid.cols(); ++c) {
+      for(int r= 0; r < loValid.rows(); ++r) {
+        if(loValid(r, c)) registerSquare(r, c, bf);
+      }
+    }
+    return loValid;
   }
 
 public:
@@ -141,6 +157,39 @@ ArrayXX<bool> FillBiLin::extendMask(P const *msk, int stride) {
   extendedMask(rseq, cseq)= (mask != P(0));
   // Return extended mask (copy of handle elided by C++-17).
   return extendedMask;
+}
+
+
+void FillBiLin::registerSquare(int r, int c, int bf) {
+  int const  top     = r * bf;       // Top    unbinned row.
+  int const  lft     = c * bf;       // Left   unbinned column.
+  int const  bot     = top + bf - 1; // Bottom unbinned row.
+  int const  rgt     = lft + bf - 1; // Right  unbinned column.
+  auto const crnrRows= seq(top, bot, bf - 1);
+  auto const crnrCols= seq(lft, rgt, bf - 1);
+  auto const edgeRows= seq(top + 1, bot - 1);
+  auto const edgeCols= seq(lft + 1, rgt - 1);
+  // Write weights for corners.
+  weights_.top()(crnrRows, crnrCols)= +1;
+  weights_.bot()(crnrRows, crnrCols)= +1;
+  weights_.lft()(crnrRows, crnrCols)= +1;
+  weights_.rgt()(crnrRows, crnrCols)= +1;
+  weights_.cen()(crnrRows, crnrCols)= -4;
+  // Write weights for vertical edges.
+  weights_.top()(edgeRows, crnrCols);
+  weights_.bot()(edgeRows, crnrCols);
+  weights_.lft()(edgeRows, crnrCols);
+  weights_.rgt()(edgeRows, crnrCols);
+  weights_.cen()(edgeRows, crnrCols);
+  // Write weights for horizontal edges.
+  weights_.top()(crnrRows, edgeCols);
+  weights_.bot()(crnrRows, edgeCols);
+  weights_.lft()(crnrRows, edgeCols);
+  weights_.rgt()(crnrRows, edgeCols);
+  weights_.cen()(crnrRows, edgeCols);
+  // Add corner and size for current square.
+  corners_.row(numSquares_) << top, lft, bf;
+  ++numSquares_;
 }
 
 

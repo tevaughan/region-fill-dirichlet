@@ -7,7 +7,7 @@
 
 #include <eigen3/Eigen/Dense> // seq
 
-namespace dirichlet {
+namespace dirichlet::impl {
 
 
 using Eigen::seq;
@@ -18,8 +18,8 @@ using Eigen::seq;
 /// Each element of `a` is boolean, and each element in returned array is true
 /// only if every element in corresponding 2x2 in `a` be true.
 ///
-/// Throw exception if `a` have not both even number of rows and even number of
-/// columns.
+/// Throw exception if `a` have not both positive, even number of rows and
+/// positive, even number of columns.
 ///
 /// \tparam T  Type of either array of bool or equivalent expression-template.
 /// \param  a  Array to bin.
@@ -36,11 +36,11 @@ template<typename T> auto bin2x2(T const &a) {
   auto const rgt= seq(1, nc - 1, 2);
   auto const top= seq(0, nr - 2, 2);
   auto const bot= seq(1, nr - 1, 2);
-  return a(lft, top) && a(lft, bot) && a(rgt, top) && a(rgt, bot);
+  return a(top, lft) && a(bot, lft) && a(top, rgt) && a(bot, rgt);
 }
 
 
-} // namespace dirichlet
+} // namespace dirichlet::impl
 
 #endif // ndef DIRICHLET_IMPL_BIN2X2_HPP
 
