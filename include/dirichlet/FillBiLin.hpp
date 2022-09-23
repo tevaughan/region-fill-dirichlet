@@ -9,7 +9,6 @@
 #include "impl/bin2x2.hpp"      // bin2x2()
 #include "impl/unbin2x2.hpp"    // unbin2x2()
 #include "impl/validSquare.hpp" // validSquare()
-#include <iostream>
 
 namespace dirichlet {
 
@@ -90,13 +89,6 @@ class FillBiLin {
       ArrayXX<bool> const lowerValid= binMask(lo, bf * 2);
       // Eliminate from loValid any overlap in lowerValid.
       loValid= loValid && !impl::unbin2x2(lowerValid);
-      std::cerr << "hi=\n"
-                << hi << "\nlo=\n"
-                << lo << "\nloValid=\n"
-                << loValid << "\nlowerValid=\n"
-                << lowerValid << "\nunbin2x2(lowerValid)=\n"
-                << impl::unbin2x2(lowerValid) << "\n!unbin2x2(lowerValid)=\n"
-                << (!impl::unbin2x2(lowerValid)) << std::endl;
     }
     for(int c= 0; c < loValid.cols(); ++c) {
       for(int r= 0; r < loValid.rows(); ++r) {
