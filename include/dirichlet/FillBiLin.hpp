@@ -79,24 +79,26 @@ class FillBiLin {
   /// `corners_` as needed, and returns result of next-lower-resolution
   /// binning.
   ///
-  /// \tparam T   Type of array or expression-template for array.
   /// \param  hi  Higher-resolution mask.
   /// \param  bf  Absolute binning factor of lo relative to unbinned mask.
   /// \return     Expression-template for end-result at next lower resolution.
   ///
-  template<typename T> auto binMask(T const &hi, int bf) {
+  ArrayXX<bool> binMask(ArrayXX<bool> const &hi, int bf) {
     // Bin to current level.
-    auto lo= impl::bin2x2(hi);
+    ArrayXX<bool> const lo= impl::bin2x2(hi);
+    int const           nr= lo.rows();
+    int const           nc= lo.cols();
     // Identify interpolable squares at current level.
-    auto loValid= impl::validSquare(lo);
+    if(nr < 3 || nc < 3) return ArrayXX<bool>::Zero(nr, nc);
+    ArrayXX<bool> loValid= impl::validSquare(lo);
     // Count number of interpolable squares at current level.
     int const sum= loValid.template cast<int>().sum();
     // Make recursive call only if enough interpolable squares.
-    if(lo.rows() >= 8 && lo.cols() >= 8 && sum >= 4) {
+    if(nr >= 8 && nc >= 8 && sum >= 4) {
       // Make recursive call.
-      auto const lowerValid= binMask(lo, bf * 2);
+      ArrayXX<bool> const lowerValid= binMask(lo, bf * 2);
       // Eliminate from loValid any overlap in lowerValid.
-      loValid= loValid && !unbin2x2(lowerValid);
+      loValid= loValid && !impl::unbin2x2(lowerValid);
     }
     for(int c= 0; c < loValid.cols(); ++c) {
       for(int r= 0; r < loValid.rows(); ++r) {
@@ -131,10 +133,9 @@ public:
 // Implementation.
 // ---------------
 
-#include "impl/Image.hpp"    // Image, ImageMap
-#include "impl/binMasks.hpp" // binMasks(), vector
-#include "impl/pow2.hpp"     // pow2()
-#include <iostream>          // cout, endl
+#include "impl/Image.hpp" // Image, ImageMap
+#include "impl/pow2.hpp"  // pow2()
+#include <iostream>       // cout, endl
 
 namespace dirichlet {
 
@@ -197,13 +198,27 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
 template<typename P>
 FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
     weights_(h, w), corners_(h * w / 16, 3) {
-  ArrayXX<bool> const   m0= extendMask(msk, stride);
-  vector<ArrayXX<bool>> m = impl::binMasks(m0);
+
+  ArrayXX<bool> const m0= extendMask(msk, stride);
   std::cout << "w=" << w << " "
             << "h=" << h << " "
             << "w0=" << m0.cols() << " "
-            << "h0=" << m0.rows() << " "
-            << "numMasks=" << m.size() << std::endl;
+            << "h0=" << m0.rows() << " " << std::endl;
+  if(m0.rows() < 2 || m0.cols() < 2) {
+    std::cerr << "FillBilLin: ERROR: m0 too small" << std::endl;
+    return;
+  }
+
+  ArrayXX<bool> const m1= impl::bin2x2(m0);
+  std::cout << "w1=" << m1.cols() << " "
+            << "h1=" << m1.rows() << " " << std::endl;
+  if(m1.rows() < 2 || m1.cols() < 2) {
+    std::cerr << "FillBilLin: ERROR: m1 too small" << std::endl;
+    return;
+  }
+
+  ArrayXX<bool> const mv2= binMask(m1, 4);
+  std::cout << "mv2=\n" << mv2 << std::endl;
 }
 
 

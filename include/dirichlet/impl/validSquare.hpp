@@ -19,14 +19,14 @@ using Eigen::seq;
 /// Each element of `a` is boolean, and each element in returned array is true
 /// only if every one of the four neighbors of the element be true.
 ///
-/// \tparam T  Type of either array of bool or equivalent expression-template.
 /// \param  a  Array to test.
 /// \return    Result of test.
 ///
-template<typename T> auto validSquare(T const &a) {
+inline ArrayXX<bool> validSquare(ArrayXX<bool> const &a) {
   int const     nr= a.rows();
   int const     nc= a.cols();
   ArrayXX<bool> b = ArrayXX<bool>::Zero(nr, nc);
+  if(nr < 2 || nc < 2) throw "a too small";
   auto const    tr= seq(0, nr - 2); // Top     row.
   auto const    br= seq(1, nr - 1); // Bottom  row.
   auto const    lc= seq(0, nc - 2); // Left    column.

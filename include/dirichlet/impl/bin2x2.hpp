@@ -10,6 +10,7 @@
 namespace dirichlet::impl {
 
 
+using Eigen::ArrayXX;
 using Eigen::seq;
 
 
@@ -21,11 +22,10 @@ using Eigen::seq;
 /// Throw exception if `a` have not both positive, even number of rows and
 /// positive, even number of columns.
 ///
-/// \tparam T  Type of either array of bool or equivalent expression-template.
 /// \param  a  Array to bin.
-/// \return    Expression-template for binned array.
+/// \return    Binned array.
 ///
-template<typename T> auto bin2x2(T const &a) {
+inline ArrayXX<bool> bin2x2(ArrayXX<bool> const &a) {
   int const nr= a.rows();
   int const nc= a.cols();
   if(nr < 2) throw "too few rows";

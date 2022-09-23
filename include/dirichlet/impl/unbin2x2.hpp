@@ -11,6 +11,7 @@ namespace dirichlet::impl {
 
 
 using Eigen::ArrayXi;
+using Eigen::ArrayXX;
 using Eigen::seq;
 
 
@@ -19,11 +20,10 @@ using Eigen::seq;
 /// Each element of `a` is boolean, and every element in 2x2 block of elements
 /// in returned array is true whenever corresponding element in `a` be true.
 ///
-/// \tparam T  Type of either array of bool or equivalent expression-template.
-/// \param  a  Array to bin.
-/// \return    Expression-template for binned array.
+/// \param  a  Array to unbin.
+/// \return    Unbinned array.
 ///
-template<typename T> auto unbin2x2(T const &a) {
+inline ArrayXX<bool> unbin2x2(ArrayXX<bool> const &a) {
   int const  nr= a.rows();
   int const  nc= a.cols();
   auto const r = ArrayXi::LinSpaced(2 * nr, 0, nr - 1);
@@ -37,4 +37,3 @@ template<typename T> auto unbin2x2(T const &a) {
 #endif // ndef DIRICHLET_IMPL_UNBIN2X2_HPP
 
 // EOF
-
