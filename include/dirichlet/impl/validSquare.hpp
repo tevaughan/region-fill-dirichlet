@@ -26,14 +26,19 @@ inline ArrayXX<bool> validSquare(ArrayXX<bool> const &a) {
   int const     nr= a.rows();
   int const     nc= a.cols();
   ArrayXX<bool> b = ArrayXX<bool>::Zero(nr, nc);
-  if(nr < 2 || nc < 2) throw "a too small";
-  auto const    tr= seq(0, nr - 3); // Top     row.
-  auto const    br= seq(1, nr - 2); // Bottom  row.
-  auto const    lc= seq(0, nc - 3); // Left    column.
-  auto const    rc= seq(1, nc - 2); // Right   column.
-  auto const    cr= seq(1, nr - 2); // Central row.
-  auto const    cc= seq(1, nc - 2); // Central column.
-  b(cr, cc)= a(tr, cc) && a(br, cc) && a(cr, lc) && a(cr, rc) && a(cr, cc);
+  if(nr < 3 || nc < 3) throw "a too small";
+  auto const cenr= seq(1, nr - 2);
+  auto const cenc= seq(1, nc - 2);
+  auto const topr= seq(0, nr - 3);
+  auto const botr= seq(2, nr - 1);
+  auto const lftc= seq(0, nc - 3);
+  auto const rgtc= seq(2, nc - 1);
+  auto const top = a(topr, cenc);
+  auto const bot = a(botr, cenc);
+  auto const lft = a(cenr, lftc);
+  auto const rgt = a(cenr, rgtc);
+  auto const cen = a(cenr, cenc);
+  b(cenr, cenc)  = top && bot && lft && rgt && cen;
   return b;
 }
 

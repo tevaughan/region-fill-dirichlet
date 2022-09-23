@@ -9,6 +9,7 @@
 #include "impl/bin2x2.hpp"      // bin2x2()
 #include "impl/unbin2x2.hpp"    // unbin2x2()
 #include "impl/validSquare.hpp" // validSquare()
+#include <iostream>
 
 namespace dirichlet {
 
@@ -37,24 +38,14 @@ using Eigen::seq;
 /// Instance is function-object that solves linear problem by analyzing
 /// image-data.
 class FillBiLin {
-  /// Left, right, top, bottom, and center weights for each pixel.  For each
-  /// pixel not to be filled, each weight is zero.  For each pixel to be filled
-  /// by interpolant, each weight is zero.  For each pixel along edge of square
-  /// to interpolate, weights represent one-dimensional Laplacian, with nonzero
-  /// weights only along edge (and zero weights perpendicular to edge).  For
-  /// each pixel along edge of image, weights correspond to mean of available
-  /// neighbors.  Otherwise, for pixel whose value is to be solved for in
-  /// region to be filled, weights correspond to mean of pixel.
+  /// Left, right, top, bottom, and center weights for each pixel.
   impl::Weights weights_;
 
   /// Number of squares over which to interpolate.
   int numSquares_= 0;
 
-  /// Array with three columns, two for coordinates of top-left pixel of square
-  /// to interpolate and one for number of pixels along side of square.  Size
-  /// is set initially (in constructor) to h()*w()/16 rows, which corresponds
-  /// to the limiting number of squares.  Size is adjusted downward after
-  /// initial call to binMask() returns.
+  /// Corner-coordinates and side-length for each square over which to
+  /// interpolate.
   ArrayX3<int16_t> corners_;
 
   /// Extend mask with with zeros so that it is power of two along each
@@ -99,6 +90,13 @@ class FillBiLin {
       ArrayXX<bool> const lowerValid= binMask(lo, bf * 2);
       // Eliminate from loValid any overlap in lowerValid.
       loValid= loValid && !impl::unbin2x2(lowerValid);
+      std::cerr << "hi=\n"
+                << hi << "\nlo=\n"
+                << lo << "\nloValid=\n"
+                << loValid << "\nlowerValid=\n"
+                << lowerValid << "\nunbin2x2(lowerValid)=\n"
+                << impl::unbin2x2(lowerValid) << "\n!unbin2x2(lowerValid)=\n"
+                << (!impl::unbin2x2(lowerValid)) << std::endl;
     }
     for(int c= 0; c < loValid.cols(); ++c) {
       for(int r= 0; r < loValid.rows(); ++r) {
@@ -124,6 +122,35 @@ public:
   /// Height of image.
   /// \return  Height of image.
   int h() const { return weights_.h(); }
+
+  /// Left, right, top, bottom, and center weights for each pixel.
+  ///
+  /// For each pixel not to be filled, each weight is zero.  For each pixel to
+  /// be filled by interpolant, each weight is zero.  For each pixel along edge
+  /// of square to interpolate, weights represent one-dimensional Laplacian,
+  /// with nonzero weights only along edge (and zero weights perpendicular to
+  /// edge).  For each pixel along edge of image, weights correspond to mean of
+  /// available neighbors.  Otherwise, for pixel whose value is to be solved
+  /// for in region to be filled, weights correspond to mean of pixel.
+  ///
+  /// \return  Left, right, top, bottom, and center weights for each pixel.
+  impl::Weights const &weights() const { return weights_; }
+
+  /// Number of squares over which to interpolate.
+  /// \return  Number of squares over which to interpolate.
+  int numSquares() const { return numSquares_; }
+
+  /// Array with three columns, two for coordinates of top-left pixel of each
+  /// square over which to interpolate and one for number of pixels along side
+  /// of square.
+  ///
+  /// Size is set initially (in constructor) to h()*w()/16 rows, which
+  /// corresponds to the limiting number of squares.  Size is adjusted downward
+  /// after actual number of squares is computed.
+  ///
+  /// \return  Corner-coordinates and side-length for each square over which to
+  ///          interpolate.
+  ArrayX3<int16_t> const &corners() const { return corners_; }
 };
 
 
@@ -142,6 +169,8 @@ namespace dirichlet {
 
 using Eigen::seq;
 using Eigen::Stride;
+using std::cerr;
+using std::endl;
 using std::vector;
 
 
@@ -178,17 +207,17 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
   weights_.rgt()(crnrRows, crnrCols)= +1;
   weights_.cen()(crnrRows, crnrCols)= -4;
   // Write weights for vertical edges.
-  weights_.top()(edgeRows, crnrCols);
-  weights_.bot()(edgeRows, crnrCols);
-  weights_.lft()(edgeRows, crnrCols);
-  weights_.rgt()(edgeRows, crnrCols);
-  weights_.cen()(edgeRows, crnrCols);
+  weights_.top()(edgeRows, crnrCols)= +1;
+  weights_.bot()(edgeRows, crnrCols)= +1;
+  weights_.lft()(edgeRows, crnrCols)= +0;
+  weights_.rgt()(edgeRows, crnrCols)= +0;
+  weights_.cen()(edgeRows, crnrCols)= -2;
   // Write weights for horizontal edges.
-  weights_.top()(crnrRows, edgeCols);
-  weights_.bot()(crnrRows, edgeCols);
-  weights_.lft()(crnrRows, edgeCols);
-  weights_.rgt()(crnrRows, edgeCols);
-  weights_.cen()(crnrRows, edgeCols);
+  weights_.top()(crnrRows, edgeCols)= +0;
+  weights_.bot()(crnrRows, edgeCols)= +0;
+  weights_.lft()(crnrRows, edgeCols)= +1;
+  weights_.rgt()(crnrRows, edgeCols)= +1;
+  weights_.cen()(crnrRows, edgeCols)= -2;
   // Add corner and size for current square.
   corners_.row(numSquares_) << top, lft, bf;
   ++numSquares_;
@@ -197,53 +226,20 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
 
 // Maximum number of corners is h*w/16 because smallest square has 16 pixels.
 template<typename P>
-FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
-    weights_(h, w), corners_(h * w / 16, 3) {
-  using std::cerr;
-  using std::cout;
-  using std::endl;
-
-  std::cout << "w=" << w << " "
-            << "h=" << h << " "
-            << "stride=" << stride << endl;
-
-  cout << "msk=\n";
-  int j= 0;
-  for(int r= 0; r < h; ++r) {
-    for(int c= 0; c < w; ++c) { std::cout << int(msk[j++]) << " "; }
-    std::cout << std::endl;
-  }
-  cout << endl;
-
+FillBiLin::FillBiLin(P const *msk, int w, int h, int stride): weights_(h, w) {
   ArrayXX<bool> const m0= extendMask(msk, stride);
-  cout << "w0=" << m0.cols() << " "
-       << "h0=" << m0.rows() << "\n"
-       << "m0=\n"
-       << m0 << endl;
   if(m0.rows() < 2 || m0.cols() < 2) {
     std::cerr << "FillBilLin: ERROR: m0 too small" << std::endl;
     return;
   }
-
   ArrayXX<bool> const m1= impl::bin2x2(m0);
-  cout << "w1=" << m1.cols() << " "
-       << "h1=" << m1.rows() << "\n"
-       << "m1\n"
-       << m1 << endl;
   if(m1.rows() < 2 || m1.cols() < 2) {
     cerr << "FillBilLin: ERROR: m1 too small" << endl;
     return;
   }
-
+  corners_.resize(h * w / 16, 3); // Smallest square has 16 pixels.
   ArrayXX<bool> const mv2= binMask(m1, 4);
-  cout << "mv2=\n" << mv2 << endl;
-
-  cout << "squares:\n" << endl;
-  for(int i=0; i < numSquares_; ++i) {
-    std::cout << i << " " << corners_.row(i) << std::endl;
-  }
-
-  cout << "center weight\n" << weights_.cen() << endl;
+  corners_.conservativeResize(numSquares_, 3);
 }
 
 
