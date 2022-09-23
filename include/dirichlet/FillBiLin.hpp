@@ -141,6 +141,7 @@ namespace dirichlet {
 
 
 using Eigen::seq;
+using Eigen::Stride;
 using std::vector;
 
 
@@ -150,7 +151,7 @@ ArrayXX<bool> FillBiLin::extendMask(P const *msk, int stride) {
   // Allocate space for extended mask.
   ArrayXX<bool> extendedMask= ArrayXX<bool>::Zero(pow2(h()), pow2(w()));
   // Map mask to logical image.
-  impl::ImageMap<P const> mask(msk, h(), w(), impl::Stride(stride));
+  impl::ImageMap<P const> mask(msk, h(), w(), stride);
   // Initialize range of rows and columns for copying.
   auto const rseq= seq(0, h() - 1);
   auto const cseq= seq(0, w() - 1);
@@ -198,27 +199,51 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
 template<typename P>
 FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
     weights_(h, w), corners_(h * w / 16, 3) {
+  using std::cerr;
+  using std::cout;
+  using std::endl;
 
-  ArrayXX<bool> const m0= extendMask(msk, stride);
   std::cout << "w=" << w << " "
             << "h=" << h << " "
-            << "w0=" << m0.cols() << " "
-            << "h0=" << m0.rows() << " " << std::endl;
+            << "stride=" << stride << endl;
+
+  cout << "msk=\n";
+  int j= 0;
+  for(int r= 0; r < h; ++r) {
+    for(int c= 0; c < w; ++c) { std::cout << int(msk[j++]) << " "; }
+    std::cout << std::endl;
+  }
+  cout << endl;
+
+  ArrayXX<bool> const m0= extendMask(msk, stride);
+  cout << "w0=" << m0.cols() << " "
+       << "h0=" << m0.rows() << "\n"
+       << "m0=\n"
+       << m0 << endl;
   if(m0.rows() < 2 || m0.cols() < 2) {
     std::cerr << "FillBilLin: ERROR: m0 too small" << std::endl;
     return;
   }
 
   ArrayXX<bool> const m1= impl::bin2x2(m0);
-  std::cout << "w1=" << m1.cols() << " "
-            << "h1=" << m1.rows() << " " << std::endl;
+  cout << "w1=" << m1.cols() << " "
+       << "h1=" << m1.rows() << "\n"
+       << "m1\n"
+       << m1 << endl;
   if(m1.rows() < 2 || m1.cols() < 2) {
-    std::cerr << "FillBilLin: ERROR: m1 too small" << std::endl;
+    cerr << "FillBilLin: ERROR: m1 too small" << endl;
     return;
   }
 
   ArrayXX<bool> const mv2= binMask(m1, 4);
-  std::cout << "mv2=\n" << mv2 << std::endl;
+  cout << "mv2=\n" << mv2 << endl;
+
+  cout << "squares:\n" << endl;
+  for(int i=0; i < numSquares_; ++i) {
+    std::cout << i << " " << corners_.row(i) << std::endl;
+  }
+
+  cout << "center weight\n" << weights_.cen() << endl;
 }
 
 

@@ -5,14 +5,15 @@
 #ifndef DIRICHLET_IMPL_WEIGHTS_HPP
 #define DIRICHLET_IMPL_WEIGHTS_HPP
 
-#include "Stride.hpp" // Stride
-#include <cstdint>    // uint64_t
-#include <vector>     // vector
+#include <cstdint>            // uint64_t
+#include <eigen3/Eigen/Dense> // ArrayXX
+#include <vector>             // vector
 
 namespace dirichlet::impl {
 
 
 using Eigen::ArrayXX;
+using Eigen::InnerStride;
 using Eigen::Unaligned;
 using std::vector;
 
@@ -30,21 +31,24 @@ class Weights {
   /// \return        Number of `uint64_t` needed to store `nBytes` bytes.
   static int nWords(int nBytes) { return nBytes / sizeof(uint64_t) + 1; }
 
+  /// Offset of each weight.
+  enum WeightOffset { LFT, RGT, TOP, BOT, CEN, NUM_WEIGHTS };
+
+  /// Stride for same weight in subsequent elements.
+  using Stride= InnerStride<NUM_WEIGHTS>;
+
   /// Type of array for non-const element.
   using Map= Eigen::Map<ArrayXX<int8_t>, Unaligned, Stride>;
 
   /// Type of array for const element.
   using ConstMap= Eigen::Map<ArrayXX<int8_t> const, Unaligned, Stride>;
 
-  /// Offset of each weight.
-  enum WeightOffset { LFT, RGT, TOP, BOT, CEN, NUM_WEIGHTS };
-
   /// Expression-template for weight at specified offset.
   /// \param off  Offset of weight in pattern.
   /// \return     Expression template for array of weights at same offset.
   auto weight(int off) {
     int8_t *first= ((int8_t *)&s_[0]) + off;
-    return Map(first, h_, w_, Stride(NUM_WEIGHTS));
+    return Map(first, h_, w_);
   }
 
   /// Expression-template for weight at specified offset.
@@ -52,7 +56,7 @@ class Weights {
   /// \return     Expression template for array of weights at same offset.
   auto weight(int off) const {
     int8_t const *first= ((int8_t const *)&s_[0]) + off;
-    return ConstMap(first, h_, w_, Stride(NUM_WEIGHTS));
+    return ConstMap(first, h_, w_);
   }
 
 public:

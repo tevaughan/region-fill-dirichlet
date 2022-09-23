@@ -9,7 +9,6 @@
 #ifndef DIRICHLET_IMPL_IMAGE_HPP
 #define DIRICHLET_IMPL_IMAGE_HPP
 
-#include "Stride.hpp"         // Stride
 #include <eigen3/Eigen/Dense> // Array, Dynamic, Map, RowMajor, Unaligned
 
 namespace dirichlet::impl {
@@ -17,7 +16,7 @@ namespace dirichlet::impl {
 
 using Eigen::Array;
 using Eigen::Dynamic;
-using Eigen::Map;
+using Eigen::InnerStride;
 using Eigen::RowMajor;
 using Eigen::Unaligned;
 
@@ -53,7 +52,8 @@ template<typename P> using Image= typename ImageHelper<P>::Type;
 
 /// Map used to present image as Image<P>.
 /// \tparam P  Type of each pixel-value in image.
-template<typename P> using ImageMap= Map<Image<P>, Unaligned, Stride>;
+template<typename P>
+using ImageMap= Eigen::Map<Image<P>, Unaligned, InnerStride<Dynamic>>;
 
 
 } // namespace dirichlet::impl

@@ -27,10 +27,10 @@ inline ArrayXX<bool> validSquare(ArrayXX<bool> const &a) {
   int const     nc= a.cols();
   ArrayXX<bool> b = ArrayXX<bool>::Zero(nr, nc);
   if(nr < 2 || nc < 2) throw "a too small";
-  auto const    tr= seq(0, nr - 2); // Top     row.
-  auto const    br= seq(1, nr - 1); // Bottom  row.
-  auto const    lc= seq(0, nc - 2); // Left    column.
-  auto const    rc= seq(1, nc - 1); // Right   column.
+  auto const    tr= seq(0, nr - 3); // Top     row.
+  auto const    br= seq(1, nr - 2); // Bottom  row.
+  auto const    lc= seq(0, nc - 3); // Left    column.
+  auto const    rc= seq(1, nc - 2); // Right   column.
   auto const    cr= seq(1, nr - 2); // Central row.
   auto const    cc= seq(1, nc - 2); // Central column.
   b(cr, cc)= a(tr, cc) && a(br, cc) && a(cr, lc) && a(cr, rc) && a(cr, cc);
