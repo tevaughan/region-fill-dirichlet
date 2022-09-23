@@ -47,20 +47,42 @@ class FillBiLin {
   /// interpolate.
   ArrayX3<int16_t> corners_;
 
+  /// Mask that has been extended if necessary so that each of the number of
+  /// rows and the number of columns is a power of two.  When first
+  /// initialized, each element is true only if corresponding pixel should be
+  /// filled.  However, after the initial call to (recursive) binMask() return,
+  /// an element is true only if corresponding pixel both be not involved in
+  /// any square interpolant and should be solved for.
+  ArrayXX<bool> extendedMask_;
+
   /// Extend mask with with zeros so that it is power of two along each
   /// dimension, and convert to array of boolean.
   /// \tparam P       Type of each pixel-value in mask.
   /// \param  msk     Pointer to first pixel of row-major mask-image.
   /// \param  stride  Pointer-increments between consecutive pixels.
-  /// \return         Extended mask.
-  template<typename P> ArrayXX<bool> extendMask(P const *msk, int stride);
+  template<typename P> void extendMask(P const *msk, int stride);
 
   /// Modify `weights_` for corners and edges of square to interpolate, add
-  /// entry to `corners_`, and increment `numSquares_`.
+  /// entry to `corners_`, increment `numSquares_`, and set false in
+  /// `extendedMask_` every pixel corresponding to square.
   /// \param r   Row of valid pixel at binning-factor bf in binMask().
   /// \param c   Col of valid pixel at binning-vactor bf in binMask().
   /// \param bf  Absolute binning factor relative to unbinned mask.
   void registerSquare(int r, int c, int bf);
+
+  /// Modify `weights_` for corners and edges of square to interpolate.
+  /// \param top  Top    unbinned row.
+  /// \param lft  Left   unbinned column.
+  /// \param bot  Bottom unbinned row.
+  /// \param rgt  Right  unbinned column.
+  void registerSquareWeights(int top, int lft, int bot, int rgt);
+
+  /// Set false in `extendedMask_` every pixel corresponding to square.
+  /// \param top  Top    unbinned row.
+  /// \param lft  Left   unbinned column.
+  /// \param bot  Bottom unbinned row.
+  /// \param rgt  Right  unbinned column.
+  void eliminateSquareFromMap(int top, int lft, int bot, int rgt);
 
   /// Recursive function that performs binning on higher-resolution mask `hi`,
   /// detects valid squares at current binning level, calls itself (if enough
@@ -97,6 +119,26 @@ class FillBiLin {
     }
     return loValid;
   }
+
+  /// After binMask() is done, constructor calls this to set, if necessary,
+  /// weights for each image-corner pixel whose value is to be solved for.
+  /// \param h  Height of image.
+  /// \param w  Width  of image.
+  void populateCornerWeights(int h, int w);
+
+  /// After binMask() is done, constructor calls this to set, if necessary,
+  /// weights for each image-edge pixel whose value is to be solved for.
+  /// \param h  Height of image.
+  /// \param w  Width  of image.
+  void populateEdgeWeights(int h, int w);
+
+  /// After binMask() is done, constructor calls this to set, if necessary,
+  /// weights for each interior image-pixel whose value is to be solved for and
+  /// which has not already had its weights set by way of its assocation with
+  /// the perimter of a square marked for interpolation.
+  /// \param h  Height of image.
+  /// \param w  Width  of image.
+  void populateInteriorWeights(int h, int w);
 
 public:
   /// Set up linear problem by analyzing mask.
@@ -166,30 +208,36 @@ using std::endl;
 using std::vector;
 
 
-template<typename P>
-ArrayXX<bool> FillBiLin::extendMask(P const *msk, int stride) {
+template<typename P> void FillBiLin::extendMask(P const *msk, int stride) {
   using impl::pow2;
   // Allocate space for extended mask.
-  ArrayXX<bool> extendedMask= ArrayXX<bool>::Zero(pow2(h()), pow2(w()));
+  extendedMask_= ArrayXX<bool>::Zero(pow2(h()), pow2(w()));
   // Map mask to logical image.
   impl::ImageMap<P const> mask(msk, h(), w(), stride);
   // Initialize range of rows and columns for copying.
   auto const rseq= seq(0, h() - 1);
   auto const cseq= seq(0, w() - 1);
   // Copy original mask into extended mask, and convert to ones and zeros.
-  extendedMask(rseq, cseq)= (mask != P(0));
-  // Return extended mask (copy of handle elided by C++-17).
-  return extendedMask;
+  extendedMask_(rseq, cseq)= (mask != P(0));
 }
 
 
 void FillBiLin::registerSquare(int r, int c, int bf) {
-  int const  top     = r * bf;       // Top    unbinned row.
-  int const  lft     = c * bf;       // Left   unbinned column.
-  int const  bot     = top + bf - 1; // Bottom unbinned row.
-  int const  rgt     = lft + bf - 1; // Right  unbinned column.
-  auto const crnrRows= seq(top, bot, bf - 1);
-  auto const crnrCols= seq(lft, rgt, bf - 1);
+  int const top= r * bf;       // Top    unbinned row.
+  int const lft= c * bf;       // Left   unbinned column.
+  int const bot= top + bf - 1; // Bottom unbinned row.
+  int const rgt= lft + bf - 1; // Right  unbinned column.
+  registerSquareWeights(top, lft, bot, rgt);
+  eliminateSquareFromMap(top, lft, bot, rgt);
+  // Add corner and size for current square.
+  corners_.row(numSquares_) << top, lft, bf;
+  ++numSquares_;
+}
+
+
+void FillBiLin::registerSquareWeights(int top, int lft, int bot, int rgt) {
+  auto const crnrRows= seq(top, bot, bot - top);
+  auto const crnrCols= seq(lft, rgt, rgt - lft);
   auto const edgeRows= seq(top + 1, bot - 1);
   auto const edgeCols= seq(lft + 1, rgt - 1);
   // Write weights for corners.
@@ -210,28 +258,101 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
   weights_.lft()(crnrRows, edgeCols)= +1;
   weights_.rgt()(crnrRows, edgeCols)= +1;
   weights_.cen()(crnrRows, edgeCols)= -2;
-  // Add corner and size for current square.
-  corners_.row(numSquares_) << top, lft, bf;
-  ++numSquares_;
+}
+
+
+void FillBiLin::eliminateSquareFromMap(int top, int lft, int bot, int rgt) {
+  auto const rows          = seq(top, bot);
+  auto const cols          = seq(lft, rgt);
+  extendedMask_(rows, cols)= false;
+}
+
+
+void FillBiLin::populateCornerWeights(int h, int w) {
+  if(extendedMask_(0, 0)) {
+    weights_.bot()(0, 0)= +1;
+    weights_.rgt()(0, 0)= +1;
+    weights_.cen()(0, 0)= -2;
+  }
+  if(extendedMask_(0, w - 1)) {
+    weights_.bot()(0, w - 1)= +1;
+    weights_.lft()(0, w - 1)= +1;
+    weights_.cen()(0, w - 1)= -2;
+  }
+  if(extendedMask_(h - 1, w - 1)) {
+    weights_.top()(h - 1, w - 1)= +1;
+    weights_.lft()(h - 1, w - 1)= +1;
+    weights_.cen()(h - 1, w - 1)= -2;
+  }
+  if(extendedMask_(h - 1, 0)) {
+    weights_.top()(h - 1, 0)= +1;
+    weights_.rgt()(h - 1, 0)= +1;
+    weights_.cen()(h - 1, 0)= -2;
+  }
+}
+
+
+void FillBiLin::populateEdgeWeights(int h, int w) {
+  auto const rows            = seq(1, h - 2);
+  auto const cols            = seq(1, w - 2);
+  auto const lftMask         = extendedMask_(rows, 0);
+  auto const topMask         = extendedMask_(0, cols);
+  auto const rgtMask         = extendedMask_(rows, w - 1);
+  auto const botMask         = extendedMask_(h - 1, cols);
+  weights_.top()(rows, 0)    = lftMask.cast<int8_t>() * (+1);
+  weights_.rgt()(rows, 0)    = lftMask.cast<int8_t>() * (+1);
+  weights_.bot()(rows, 0)    = lftMask.cast<int8_t>() * (+1);
+  weights_.cen()(rows, 0)    = lftMask.cast<int8_t>() * (-3);
+  weights_.lft()(0, cols)    = topMask.cast<int8_t>() * (+1);
+  weights_.rgt()(0, cols)    = topMask.cast<int8_t>() * (+1);
+  weights_.bot()(0, cols)    = topMask.cast<int8_t>() * (+1);
+  weights_.cen()(0, cols)    = topMask.cast<int8_t>() * (-3);
+  weights_.top()(rows, w - 1)= rgtMask.cast<int8_t>() * (+1);
+  weights_.lft()(rows, w - 1)= rgtMask.cast<int8_t>() * (+1);
+  weights_.bot()(rows, w - 1)= rgtMask.cast<int8_t>() * (+1);
+  weights_.cen()(rows, w - 1)= rgtMask.cast<int8_t>() * (-3);
+  weights_.lft()(h - 1, cols)= botMask.cast<int8_t>() * (+1);
+  weights_.rgt()(h - 1, cols)= botMask.cast<int8_t>() * (+1);
+  weights_.top()(h - 1, cols)= botMask.cast<int8_t>() * (+1);
+  weights_.cen()(h - 1, cols)= botMask.cast<int8_t>() * (-3);
+}
+
+
+void FillBiLin::populateInteriorWeights(int h, int w) {
+  auto const rows= seq(1, h - 2);
+  auto const cols= seq(1, w - 2);
+  auto const mask= extendedMask_(rows, cols).cast<int8_t>();
+  weights_.top()(rows, cols)+= mask * (+1);
+  weights_.bot()(rows, cols)+= mask * (+1);
+  weights_.lft()(rows, cols)+= mask * (+1);
+  weights_.rgt()(rows, cols)+= mask * (+1);
+  weights_.cen()(rows, cols)+= mask * (-4);
 }
 
 
 // Maximum number of corners is h*w/16 because smallest square has 16 pixels.
 template<typename P>
 FillBiLin::FillBiLin(P const *msk, int w, int h, int stride): weights_(h, w) {
-  ArrayXX<bool> const m0= extendMask(msk, stride);
-  if(m0.rows() < 2 || m0.cols() < 2) {
+  extendMask(msk, stride);
+  if(extendedMask_.rows() < 2 || extendedMask_.cols() < 2) {
     std::cerr << "FillBilLin: ERROR: m0 too small" << std::endl;
     return;
   }
-  ArrayXX<bool> const m1= impl::bin2x2(m0);
+  ArrayXX<bool> const m1= impl::bin2x2(extendedMask_);
   if(m1.rows() < 2 || m1.cols() < 2) {
     cerr << "FillBilLin: ERROR: m1 too small" << endl;
     return;
   }
-  corners_.resize(h * w / 16, 3); // Smallest square has 16 pixels.
-  ArrayXX<bool> const mv2= binMask(m1, 4);
+  // Prepare corners_ for binMask().  Smallest square has 16 pixels.
+  corners_.resize(h * w / 16, 3);
+  // Populate corners_, and populate some of weights_.
+  binMask(m1, 4);
+  // Shrink corners_ to minimal size.
   corners_.conservativeResize(numSquares_, 3);
+  // Finish setting up weights.
+  populateCornerWeights(h, w);
+  populateEdgeWeights(h, w);
+  populateInteriorWeights(h, w);
 }
 
 
