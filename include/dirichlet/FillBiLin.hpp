@@ -9,15 +9,20 @@
 #include "impl/bin2x2.hpp"      // bin2x2()
 #include "impl/unbin2x2.hpp"    // unbin2x2()
 #include "impl/validSquare.hpp" // validSquare()
+#include <eigen3/Eigen/Sparse>  // SparseMatrix
 
 namespace dirichlet {
 
 
 using Eigen::Array3;
+using Eigen::ArrayX2i;
 using Eigen::ArrayX3;
 using Eigen::ArrayXi;
 using Eigen::ArrayXX;
+using Eigen::ArrayXXi;
 using Eigen::seq;
+using Eigen::SimplicialCholesky;
+using Eigen::SparseMatrix;
 
 
 /// Fill holes in image by approximately solving Dirichlet-problem for
@@ -27,9 +32,9 @@ using Eigen::seq;
 /// square regions, across each of which bilinear interpolant is used.  Corners
 /// of each square region are included in global solution to Dirichlet-problem,
 /// but interior of each square region is excluded from global solution in
-/// order drastically to reduce size of linear problem.  Approximation is good
-/// because exact solution is nearly linear deep in interior away from
-/// boundary.
+/// order drastically to reduce size of linear problem whenever there be a deep
+/// region to be filled.  Approximation is good because exact solution is
+/// nearly linear deep in interior away from boundary.
 ///
 /// Constructor sets up linear problem by analyzing mask indicating size of
 /// image and pixels to be filled.
@@ -43,6 +48,9 @@ class FillBiLin {
   /// Number of squares over which to interpolate.
   int numSquares_= 0;
 
+  /// Number of pixels, each of whose values is solved for in linear problem.
+  int numSolvePixels_= 0;
+
   /// Corner-coordinates and side-length for each square over which to
   /// interpolate.
   ArrayX3<int16_t> corners_;
@@ -54,6 +62,20 @@ class FillBiLin {
   /// an element is true only if corresponding pixel both be not involved in
   /// any square interpolant and should be solved for.
   ArrayXX<bool> extendedMask_;
+
+  /// Coordinates of each pixel whose value is to be solved for.  First column
+  /// in `coordMap_` is offset of pixel's row; second, of pixel's column.
+  ArrayX2i coords_;
+
+  // Map from rectangular coordinates of pixel in linear problem to
+  // corresponding row-offset of same coordinates in `coords_`.
+  ArrayXXi coordsMap_;
+
+  /// Square matrix for linear problem.
+  SparseMatrix<float> a_;
+
+  /// Pointer to Cholesky-decomposition of square matrix for linear problem.
+  SimplicialCholesky<SparseMatrix<float>> *A_= nullptr;
 
   /// Extend mask with with zeros so that it is power of two along each
   /// dimension, and convert to array of boolean.
@@ -82,7 +104,7 @@ class FillBiLin {
   /// \param lft  Left   unbinned column.
   /// \param bot  Bottom unbinned row.
   /// \param rgt  Right  unbinned column.
-  void eliminateSquareFromMap(int top, int lft, int bot, int rgt);
+  void eliminateSquareFromMask(int top, int lft, int bot, int rgt);
 
   /// Recursive function that performs binning on higher-resolution mask `hi`,
   /// detects valid squares at current binning level, calls itself (if enough
@@ -149,6 +171,14 @@ public:
   /// \param  stride  Pointer-increments between consecutive pixels.
   template<typename P> FillBiLin(P const *msk, int w, int h, int stride= 1);
 
+  /// Deallocate Cholesky-docomposition.
+  virtual ~FillBiLin() {
+    if(A_ != nullptr) {
+      delete A_;
+      A_= nullptr;
+    }
+  }
+
   /// Width of image.
   /// \return  Width of image.
   int w() const { return weights_.w(); }
@@ -185,6 +215,8 @@ public:
   /// \return  Corner-coordinates and side-length for each square over which to
   ///          interpolate.
   ArrayX3<int16_t> const &corners() const { return corners_; }
+
+  void initMatrix();
 };
 
 
@@ -203,6 +235,7 @@ namespace dirichlet {
 
 using Eigen::seq;
 using Eigen::Stride;
+using Eigen::Triplet;
 using std::cerr;
 using std::endl;
 using std::vector;
@@ -228,7 +261,7 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
   int const bot= top + bf - 1; // Bottom unbinned row.
   int const rgt= lft + bf - 1; // Right  unbinned column.
   registerSquareWeights(top, lft, bot, rgt);
-  eliminateSquareFromMap(top, lft, bot, rgt);
+  eliminateSquareFromMask(top, lft, bot, rgt);
   // Add corner and size for current square.
   corners_.row(numSquares_) << top, lft, bf;
   ++numSquares_;
@@ -261,7 +294,7 @@ void FillBiLin::registerSquareWeights(int top, int lft, int bot, int rgt) {
 }
 
 
-void FillBiLin::eliminateSquareFromMap(int top, int lft, int bot, int rgt) {
+void FillBiLin::eliminateSquareFromMask(int top, int lft, int bot, int rgt) {
   auto const rows          = seq(top, bot);
   auto const cols          = seq(lft, rgt);
   extendedMask_(rows, cols)= false;
@@ -330,12 +363,32 @@ void FillBiLin::populateInteriorWeights(int h, int w) {
 }
 
 
+void FillBiLin::initMatrix() {
+  numSolvePixels_= (weights_.cen() != 0).cast<int>().sum();
+  coords_        = ArrayX2i(numSolvePixels_, 2);
+  unsigned i     = 0;
+  for(int c= 0; c < w(); ++c) {
+    for(int r= 0; r < h(); ++r) {
+      if(weights_.cen()(r, c) != 0) {
+        coords_(i, 0)= r;
+        coords_(i, 1)= c;
+        ++i;
+      }
+    }
+  }
+  // TBS
+}
+
+
 // Maximum number of corners is h*w/16 because smallest square has 16 pixels.
 template<typename P>
-FillBiLin::FillBiLin(P const *msk, int w, int h, int stride): weights_(h, w) {
+FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
+    weights_(h, w),   //
+    coords_(h * w, 2) //
+{
   extendMask(msk, stride);
   if(extendedMask_.rows() < 2 || extendedMask_.cols() < 2) {
-    std::cerr << "FillBilLin: ERROR: m0 too small" << std::endl;
+    cerr << "FillBilLin: ERROR: m0 too small" << std::endl;
     return;
   }
   ArrayXX<bool> const m1= impl::bin2x2(extendedMask_);
@@ -343,16 +396,14 @@ FillBiLin::FillBiLin(P const *msk, int w, int h, int stride): weights_(h, w) {
     cerr << "FillBilLin: ERROR: m1 too small" << endl;
     return;
   }
-  // Prepare corners_ for binMask().  Smallest square has 16 pixels.
+  // Smallest square has 16 pixels.
   corners_.resize(h * w / 16, 3);
-  // Populate corners_, and populate some of weights_.
   binMask(m1, 4);
-  // Shrink corners_ to minimal size.
   corners_.conservativeResize(numSquares_, 3);
-  // Finish setting up weights.
   populateCornerWeights(h, w);
   populateEdgeWeights(h, w);
   populateInteriorWeights(h, w);
+  initMatrix();
 }
 
 
