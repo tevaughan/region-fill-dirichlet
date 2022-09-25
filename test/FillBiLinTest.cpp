@@ -467,6 +467,7 @@ TEST_CASE("Minimal mask works.", "[FillBiLin]") {
     cout << endl;
   }
   cout << "weights.cen=\n" << f.weights().cen() << endl;
+  cout << "coordsMap=\n" << f.coordsMap() << endl;
 
   FillBiLin const g(mask2, 24, 24);
   verify(g.weights().cen(), expectedCen2);
@@ -480,6 +481,7 @@ TEST_CASE("Minimal mask works.", "[FillBiLin]") {
     cout << endl;
   }
   cout << "weights.cen=\n" << g.weights().cen() << endl;
+  cout << "coordsMap=\n" << g.coordsMap() << endl;
 
   FillBiLin const h(mask3, 24, 24);
   verify(h.weights().cen(), expectedCen3);
@@ -493,6 +495,7 @@ TEST_CASE("Minimal mask works.", "[FillBiLin]") {
     cout << endl;
   }
   cout << "weights.cen=\n" << h.weights().cen() << endl;
+  cout << "coordsMap=\n" << h.coordsMap() << endl;
 }
 
 

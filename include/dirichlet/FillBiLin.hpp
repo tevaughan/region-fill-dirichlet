@@ -46,10 +46,10 @@ class FillBiLin {
   impl::Weights weights_;
 
   /// Number of squares over which to interpolate.
-  int numSquares_= 0;
+  int nSquares_= 0;
 
   /// Number of pixels, each of whose values is solved for in linear problem.
-  int numSolvePixels_= 0;
+  int nSolvePix_= 0;
 
   /// Corner-coordinates and side-length for each square over which to
   /// interpolate.
@@ -64,7 +64,7 @@ class FillBiLin {
   ArrayXX<bool> extendedMask_;
 
   /// Coordinates of each pixel whose value is to be solved for.  First column
-  /// in `coordMap_` is offset of pixel's row; second, of pixel's column.
+  /// in `coords_` is offset of pixel's row; second, of pixel's column.
   ArrayX2i coords_;
 
   // Map from rectangular coordinates of pixel in linear problem to
@@ -85,7 +85,7 @@ class FillBiLin {
   template<typename P> void extendMask(P const *msk, int stride);
 
   /// Modify `weights_` for corners and edges of square to interpolate, add
-  /// entry to `corners_`, increment `numSquares_`, and set false in
+  /// entry to `corners_`, increment `nSquares_`, and set false in
   /// `extendedMask_` every pixel corresponding to square.
   /// \param r   Row of valid pixel at binning-factor bf in binMask().
   /// \param c   Col of valid pixel at binning-vactor bf in binMask().
@@ -109,7 +109,7 @@ class FillBiLin {
   /// Recursive function that performs binning on higher-resolution mask `hi`,
   /// detects valid squares at current binning level, calls itself (if enough
   /// pixels at current binning), modifies `weights_` for corners and edges of
-  /// squares to interpolate, increments `numSquares_` as needed, modifies
+  /// squares to interpolate, increments `nSquares_` as needed, modifies
   /// `corners_` as needed, and returns result of next-lower-resolution
   /// binning.
   ///
@@ -202,7 +202,7 @@ public:
 
   /// Number of squares over which to interpolate.
   /// \return  Number of squares over which to interpolate.
-  int numSquares() const { return numSquares_; }
+  int nSquares() const { return nSquares_; }
 
   /// Array with three columns, two for coordinates of top-left pixel of each
   /// square over which to interpolate and one for number of pixels along side
@@ -216,7 +216,30 @@ public:
   ///          interpolate.
   ArrayX3<int16_t> const &corners() const { return corners_; }
 
+  /// Initialize matrix for linear problem.
   void initMatrix();
+
+  /// Image-coordinates of each pixel whose value is to be solved for.
+  ///
+  /// First column in returned array is offset of pixel's row; second, of
+  /// pixel's column.
+  ///
+  /// \return  Image-coordinates of each pixel whose value is to be solved for.
+  ArrayX2i const &coords() const { return coords_; }
+
+  // Map from rectangular coordinates of pixel to code representing nature of
+  // pixel in processed image.
+  //
+  // If pixel's value be solved for in linear problem, then corresponding entry
+  // in returned array is corresponding row-offset in array returned by
+  // coords().
+  //
+  // If pixel's value be interpolated, then corresponding entry in returned
+  // array has value -2.
+  //
+  // Otherwise, for pixel that retains its value from original image,
+  // corresponding entry in returned array has value -1.
+  ArrayXXi const &coordsMap() const { return coordsMap_; }
 };
 
 
@@ -263,8 +286,11 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
   registerSquareWeights(top, lft, bot, rgt);
   eliminateSquareFromMask(top, lft, bot, rgt);
   // Add corner and size for current square.
-  corners_.row(numSquares_) << top, lft, bf;
-  ++numSquares_;
+  corners_.row(nSquares_) << top, lft, bf;
+  // Mark as to be interpolated in coordsMap_.
+  coordsMap_(seq(top + 1, bot - 1), seq(lft + 1, rgt - 1))= -2;
+  // Increment number of squares.
+  ++nSquares_;
 }
 
 
@@ -364,18 +390,21 @@ void FillBiLin::populateInteriorWeights(int h, int w) {
 
 
 void FillBiLin::initMatrix() {
-  numSolvePixels_= (weights_.cen() != 0).cast<int>().sum();
-  coords_        = ArrayX2i(numSolvePixels_, 2);
-  unsigned i     = 0;
+  coords_= ArrayX2i(h() * w(), 2);
   for(int c= 0; c < w(); ++c) {
     for(int r= 0; r < h(); ++r) {
       if(weights_.cen()(r, c) != 0) {
-        coords_(i, 0)= r;
-        coords_(i, 1)= c;
-        ++i;
+        coords_(nSolvePix_, 0)= r;
+        coords_(nSolvePix_, 1)= c;
+        ++nSolvePix_;
       }
     }
   }
+  coords_.conservativeResize(nSolvePix_, 2);
+  // Linear offset of pixel in image corresponding to each row in coords_.
+  ArrayXi const lo= /*rows*/ coords_.col(0) + /*cols*/ coords_.col(1) * h();
+  // Initialize every pixel to be solved for in coordsMap_.
+  coordsMap_.reshaped()(lo)= ArrayXi::LinSpaced(nSolvePix_, 0, nSolvePix_ - 1);
   // TBS
 }
 
@@ -383,8 +412,9 @@ void FillBiLin::initMatrix() {
 // Maximum number of corners is h*w/16 because smallest square has 16 pixels.
 template<typename P>
 FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
-    weights_(h, w),   //
-    coords_(h * w, 2) //
+    weights_(h, w),                   //
+    coords_(h * w, 2),                //
+    coordsMap_(-ArrayXXi::Ones(h, w)) // By default -1, which means image-val.
 {
   extendMask(msk, stride);
   if(extendedMask_.rows() < 2 || extendedMask_.cols() < 2) {
@@ -399,7 +429,7 @@ FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
   // Smallest square has 16 pixels.
   corners_.resize(h * w / 16, 3);
   binMask(m1, 4);
-  corners_.conservativeResize(numSquares_, 3);
+  corners_.conservativeResize(nSquares_, 3);
   populateCornerWeights(h, w);
   populateEdgeWeights(h, w);
   populateInteriorWeights(h, w);
