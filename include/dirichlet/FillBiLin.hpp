@@ -405,7 +405,37 @@ void FillBiLin::initMatrix() {
   ArrayXi const lo= /*rows*/ coords_.col(0) + /*cols*/ coords_.col(1) * h();
   // Initialize every pixel to be solved for in coordsMap_.
   coordsMap_.reshaped()(lo)= ArrayXi::LinSpaced(nSolvePix_, 0, nSolvePix_ - 1);
-  // TBS
+  vector<Triplet<float>> t;
+  // At *most* five coefficients in matrix for each solved-for pixel.
+  // - Fewer than five coefficients for each solved-for pixel that touches one
+  //   or more boundary boundary-pixels.
+  //   - Only one coefficient for each solved-for pixel that touches only
+  //     boundary-pixels.
+  // - Four coefficients for each solved-for pixel on edge of image.
+  // - Three coefficients for each solved-for pixel on edge of interpolated
+  //   square.
+  // - Three coefficients for each solved-for pixel at corner of image.
+  t.reserve(coords_.rows() * 5);
+  for(int i= 0; i < coords_.rows(); ++i) {
+    int const r= coords_(i, 0);
+    int const c= coords_(i, 1);
+    t.push_back({i, i, weights_.cen()(r, c)});
+    int8_t const lw     = weights_.lft()(r, c);
+    int8_t const rw     = weights_.rgt()(r, c);
+    int8_t const tw     = weights_.top()(r, c);
+    int8_t const bw     = weights_.bot()(r, c);
+    bool const   lftSolv= (c > 0 && extendedMask_(r, c - 1));
+    bool const   topSolv= (r > 0 && extendedMask_(r - 1, c));
+    bool const   rgtSolv= (c < w() - 1 && extendedMask_(r, c + 1));
+    bool const   botSolv= (r < h() - 1 && extendedMask_(r + 1, c));
+    if(lw != 0 && lftSolv) t.push_back({i, coordsMap_(r, c - 1), lw});
+    if(rw != 0 && rgtSolv) t.push_back({i, coordsMap_(r, c + 1), rw});
+    if(tw != 0 && topSolv) t.push_back({i, coordsMap_(r - 1, c), tw});
+    if(bw != 0 && botSolv) t.push_back({i, coordsMap_(r + 1, c), bw});
+  }
+  a_= SparseMatrix<float>(coords_.rows(), coords_.rows());
+  a_.setFromTriplets(t.begin(), t.end());
+  A_= new SimplicialCholesky<SparseMatrix<float>>(a_);
 }
 
 
