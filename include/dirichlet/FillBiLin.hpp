@@ -104,6 +104,14 @@ class FillBiLin {
   /// \param rgt  Right  unbinned column.
   void eliminateSquareFromMask(int top, int lft, int bot, int rgt);
 
+  void registerSquares(ArrayXX<bool> const &valid, int bf) {
+    for(int c= 0; c < valid.cols(); ++c) {
+      for(int r= 0; r < valid.rows(); ++r) {
+        if(valid(r, c)) registerSquare(r, c, bf);
+      }
+    }
+  }
+
   /// Recursive function that performs binning on higher-resolution mask `hi`,
   /// detects valid squares at current binning level, calls itself (if enough
   /// pixels at current binning), modifies `weights_` for corners and edges of
@@ -117,28 +125,19 @@ class FillBiLin {
   ///
   ArrayXX<bool> binMask(ArrayXX<bool> const &hi, int bf) {
     // Bin to current level.
-    ArrayXX<bool> const lo= impl::bin2x2(hi);
-    int const           nr= lo.rows();
-    int const           nc= lo.cols();
+    auto const lo= impl::bin2x2(hi);
+    auto const nr= lo.rows();
+    auto const nc= lo.cols();
     // Identify interpolable squares at current level.
-    if(nr < 3 || nc < 3) return ArrayXX<bool>::Zero(nr, nc);
-    ArrayXX<bool> loValid= impl::validSquare(lo);
-    ArrayXX<bool> taken  = ArrayXX<bool>::Zero(loValid.rows(), loValid.cols());
-    // Count number of interpolable squares at current level.
-    int sum= loValid.cast<int>().sum();
+    auto const loValid= impl::validSquare(lo);
     // Make recursive call only if enough interpolable squares.
-    if(nr >= 8 && nc >= 8 && sum >= 4) {
+    if(nr >= 8 && nc >= 8 && loValid.cast<int>().sum() >= 4) {
       // Make recursive call.
-      taken= impl::unbin2x2(binMask(lo, bf * 2));
-      // Eliminate from loValid any overlap in taken.
-      loValid= loValid && !taken;
+      registerSquares(loValid && !impl::unbin2x2(binMask(lo, bf * 2)), bf);
+    } else {
+      registerSquares(loValid, bf);
     }
-    for(int c= 0; c < loValid.cols(); ++c) {
-      for(int r= 0; r < loValid.rows(); ++r) {
-        if(loValid(r, c)) registerSquare(r, c, bf);
-      }
-    }
-    return loValid || taken;
+    return loValid;
   }
 
   /// After binMask() is done, constructor calls this to set, if necessary,

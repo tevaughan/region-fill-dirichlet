@@ -22,7 +22,7 @@ using Eigen::seq;
 /// \param  a  Array to test.
 /// \return    Result of test.
 ///
-inline ArrayXX<bool> validSquare(ArrayXX<bool> const &a) {
+inline auto validSquare(ArrayXX<bool> const &a) {
   int const     nr= a.rows();
   int const     nc= a.cols();
   ArrayXX<bool> b = ArrayXX<bool>::Zero(nr, nc);
