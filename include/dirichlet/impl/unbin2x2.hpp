@@ -23,7 +23,7 @@ using Eigen::seq;
 /// \param  a  Array to unbin.
 /// \return    Unbinned array.
 ///
-inline ArrayXX<bool> unbin2x2(ArrayXX<bool> const &a) {
+auto unbin2x2(ArrayXX<bool> const &a) {
   int const  nr= a.rows();
   int const  nc= a.cols();
   auto const r = ArrayXi::LinSpaced(2 * nr, 0, nr - 1);

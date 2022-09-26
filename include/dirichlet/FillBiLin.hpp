@@ -10,6 +10,7 @@
 #include "impl/unbin2x2.hpp"    // unbin2x2()
 #include "impl/validSquare.hpp" // validSquare()
 #include <eigen3/Eigen/Sparse>  // SparseMatrix
+#include <iostream>             // cout, endl
 
 namespace dirichlet {
 
@@ -23,6 +24,8 @@ using Eigen::ArrayXXi;
 using Eigen::seq;
 using Eigen::SimplicialCholesky;
 using Eigen::SparseMatrix;
+using std::cerr;
+using std::endl;
 
 
 /// Fill holes in image by approximately solving Dirichlet-problem for
@@ -55,12 +58,7 @@ class FillBiLin {
   /// interpolate.
   ArrayX3<int16_t> corners_;
 
-  /// Mask that has been extended if necessary so that each of the number of
-  /// rows and the number of columns is a power of two.  When first
-  /// initialized, each element is true only if corresponding pixel should be
-  /// filled.  However, after the initial call to (recursive) binMask() return,
-  /// an element is true only if corresponding pixel both be not involved in
-  /// any square interpolant and should be solved for.
+  /// See documentation for extendedMask().
   ArrayXX<bool> extendedMask_;
 
   /// Coordinates of each pixel whose value is to be solved for.  First column
@@ -115,7 +113,7 @@ class FillBiLin {
   ///
   /// \param  hi  Higher-resolution mask.
   /// \param  bf  Absolute binning factor of lo relative to unbinned mask.
-  /// \return     Expression-template for end-result at next lower resolution.
+  /// \return     Squares taken at next lower resolution.
   ///
   ArrayXX<bool> binMask(ArrayXX<bool> const &hi, int bf) {
     // Bin to current level.
@@ -125,21 +123,22 @@ class FillBiLin {
     // Identify interpolable squares at current level.
     if(nr < 3 || nc < 3) return ArrayXX<bool>::Zero(nr, nc);
     ArrayXX<bool> loValid= impl::validSquare(lo);
+    ArrayXX<bool> taken  = ArrayXX<bool>::Zero(loValid.rows(), loValid.cols());
     // Count number of interpolable squares at current level.
-    int const sum= loValid.template cast<int>().sum();
+    int sum= loValid.cast<int>().sum();
     // Make recursive call only if enough interpolable squares.
     if(nr >= 8 && nc >= 8 && sum >= 4) {
       // Make recursive call.
-      ArrayXX<bool> const lowerValid= binMask(lo, bf * 2);
-      // Eliminate from loValid any overlap in lowerValid.
-      loValid= loValid && !impl::unbin2x2(lowerValid);
+      taken= impl::unbin2x2(binMask(lo, bf * 2));
+      // Eliminate from loValid any overlap in taken.
+      loValid= loValid && !taken;
     }
     for(int c= 0; c < loValid.cols(); ++c) {
       for(int r= 0; r < loValid.rows(); ++r) {
         if(loValid(r, c)) registerSquare(r, c, bf);
       }
     }
-    return loValid;
+    return loValid || taken;
   }
 
   /// After binMask() is done, constructor calls this to set, if necessary,
@@ -240,6 +239,14 @@ public:
   // Otherwise, for pixel that retains its value from original image,
   // corresponding entry in returned array has value -1.
   ArrayXXi const &coordsMap() const { return coordsMap_; }
+
+  /// Mask that has been extended if necessary so that each of the number of
+  /// rows and the number of columns is a power of two.  When first
+  /// initialized, each element is true only if corresponding pixel should be
+  /// filled.  However, after construction is done, an element is true only if
+  /// corresponding pixel both be not involved in any square interpolant and
+  /// should be solved for.
+  ArrayXX<bool> const &extendedMask() const { return extendedMask_; }
 };
 
 
@@ -251,7 +258,6 @@ public:
 
 #include "impl/Image.hpp" // Image, ImageMap
 #include "impl/pow2.hpp"  // pow2()
-#include <iostream>       // cout, endl
 
 namespace dirichlet {
 
@@ -259,8 +265,6 @@ namespace dirichlet {
 using Eigen::seq;
 using Eigen::Stride;
 using Eigen::Triplet;
-using std::cerr;
-using std::endl;
 using std::vector;
 
 

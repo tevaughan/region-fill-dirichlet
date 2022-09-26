@@ -61,7 +61,18 @@ inline void write(char const *f, Image const &image) {
   if(!(ofs << image.cols() << " " << image.rows() << "\n")) {
     throw "writePgm::size";
   }
-  if(!(ofs << image.maxCoeff() << "\n")) throw "writePgm: maxval";
+  Image im = image;
+  int   min= im.minCoeff();
+  if(min < 0) {
+    im-= min;
+    min= 0;
+  }
+  int max= im.maxCoeff();
+  if(max > 255) {
+    im = (im - min) * 255 / (max - min);
+    max= 255;
+  }
+  if(!(ofs << max << "\n")) throw "writePgm: max";
   for(int r= 0; r < image.rows(); ++r) {
     for(int c= 0; c < image.cols(); ++c) ofs.put(image(r, c));
   }

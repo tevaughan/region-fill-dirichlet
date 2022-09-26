@@ -521,6 +521,7 @@ TEST_CASE("Big image.", "[FillBiLin]") {
 #if SOLVE
   cout << "time to solve: " << t2.count() << " s" << endl;
 #endif
+  test::pgm::write("central-weight.pgm", f.weights().cen().cast<int>());
 }
 
 
