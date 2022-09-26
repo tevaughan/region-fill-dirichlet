@@ -3,26 +3,16 @@
 /// \brief      Tests for dirichlet::Fill.
 
 #include "dirichlet/Fill.hpp"           // Fill
+#include "pgm.hpp"                      // read(), write, Image, drawMask()
 #include <catch2/catch_test_macros.hpp> // TEST_CASE
 #include <chrono>                       // steady_clock
-#include <fstream>                      // ifstream, ofstream
 #include <iostream>                     // cout, endl
 
 using dirichlet::Fill;
-using Eigen::Array;
 using Eigen::Array2i;
 using Eigen::ArrayX2i;
-using Eigen::ArrayXi;
-using Eigen::ArrayXXi;
-using Eigen::Dynamic;
-using Eigen::RowMajor;
 using std::cout;
 using std::endl;
-using std::ifstream;
-using std::istream;
-using std::min_element;
-using std::ofstream;
-using std::string;
 
 
 uint8_t image1[]= {0,  1,  2,  3,  //
@@ -185,83 +175,7 @@ TEST_CASE("Constructor checks oob lo col.", "[Fill]") {
 }
 
 
-struct PgmHeader {
-  string magic;
-  int    width;
-  int    height;
-  int    maxval;
-
-  PgmHeader(istream &is) {
-    if(!(is >> magic)) throw "PgmHeader: reading magic";
-    if(magic != "P5") throw "PgmHeader: bad magic";
-    if(!(is >> width)) throw "PgmHeader: reading width";
-    if(!(is >> height)) throw "PgmHeader: reading height";
-    if(!(is >> maxval)) throw "PgmHeader: reading maxval";
-  }
-
-  int numPix() const { return width * height; }
-};
-
-
-using Image= Array<int, Dynamic, Dynamic, RowMajor>;
-
-
-Image readPgm(char const *f) {
-  ifstream        ifs(f);
-  PgmHeader const pgmHeader(ifs);
-  ArrayXXi        img(pgmHeader.height, pgmHeader.width);
-  int             n     = pgmHeader.numPix();
-  int             i     = 0;
-  bool            inData= false;
-  while(i < n && ifs) {
-    int const v= ifs.get();
-    if(inData == false && (v == ' ' || v == '\t' || v == '\n')) continue;
-    inData     = true;
-    int const r= i / pgmHeader.width;
-    int const c= i % pgmHeader.width;
-    img(r, c)  = v;
-    ++i;
-  }
-  return img;
-}
-
-
-/// Try to draw circle of radius `radiusPix` pixels at center of image that is
-/// same size as `image`, and also draw thin, vertical line at center.
-Image drawMask(Image const &image, int radiusPix= 100, int w= 10) {
-  int const rcen  = image.rows() / 2;
-  int const ccen  = image.cols() / 2;
-  int const rads[]= {radiusPix, int(image.rows()), int(image.cols())};
-  int const rpix  = *min_element(rads, rads + 3);
-  int const r2    = rpix * rpix;
-  ArrayXXi  col(1, image.cols());
-  ArrayXXi  row(image.rows(), 1);
-  col.row(0)       = ArrayXi::LinSpaced(image.cols(), 0, image.cols() - 1);
-  row.col(0)       = ArrayXi::LinSpaced(image.rows(), 0, image.rows() - 1);
-  ArrayXXi cols    = col.replicate(image.rows(), 1);
-  ArrayXXi rows    = row.replicate(1, image.cols());
-  ArrayXXi dr      = rows - rcen;
-  ArrayXXi dc      = cols - ccen;
-  ArrayXXi inCircle= (dr * dr + dc * dc < r2).cast<int>();
-  ArrayXXi inLine= (cols >= ccen - w / 2 && cols <= ccen + w / 2).cast<int>();
-  return inCircle + inLine;
-}
-
-
-void writePgm(char const *f, Image const &image) {
-  ofstream ofs(f);
-  if(!(ofs << "P5\n")) throw "writePgm: magic";
-  if(!(ofs << image.cols() << " " << image.rows() << "\n")) {
-    throw "writePgm::size";
-  }
-  if(!(ofs << image.maxCoeff() << "\n")) throw "writePgm: maxval";
-  for(int r= 0; r < image.rows(); ++r) {
-    for(int c= 0; c < image.cols(); ++c) ofs.put(image(r, c));
-  }
-}
-
-
-void timing(Image &image, Image const &mask, bool cg) {
+void timing(test::Image &image, test::Image const &mask, bool cg) {
   cout << "conjugate-gradient=" << cg << endl;
 
   auto       start= std::chrono::steady_clock::now();
@@ -283,14 +197,15 @@ void timing(Image &image, Image const &mask, bool cg) {
   cout << "  time to construct from coords: " << t3.count() << " s" << endl;
 
   char const *gfName= (cg ? "gray-filled-cg.pgm" : "gray-filled.pgm");
-  writePgm(gfName, image);
+  test::pgm::write(gfName, image);
 }
 
 
 TEST_CASE("Big image.", "[Fill]") {
-  Image       image= readPgm("gray.pgm"); // non-const for write-back by f()
-  Image const mask = drawMask(image);
-  writePgm("mask.pgm", mask);
+  // `image` is non-const for write-back by f().
+  test::Image image= test::pgm::read("gray.pgm");
+  test::Image const mask= test::drawMask(image);
+  test::pgm::write("mask.pgm", mask);
   timing(image, mask, false);
   timing(image, mask, true);
 }

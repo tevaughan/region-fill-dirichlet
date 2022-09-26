@@ -3,6 +3,7 @@
 /// \brief      Tests for dirichlet::FillBiLin.
 
 #include "dirichlet/FillBiLin.hpp"      // FillBiLin
+#include "pgm.hpp"                      // Image, drawMask(), test::pgm
 #include <catch2/catch_test_macros.hpp> // TEST_CASE
 #include <chrono>                       // steady_clock
 #include <fstream>                      // ifstream, ofstream
@@ -496,6 +497,30 @@ TEST_CASE("Minimal mask works.", "[FillBiLin]") {
   }
   cout << "weights.cen=\n" << h.weights().cen() << endl;
   cout << "coordsMap=\n" << h.coordsMap() << endl;
+}
+
+
+TEST_CASE("Big image.", "[FillBiLin]") {
+  test::Image image= test::pgm::read("gray.pgm");
+  test::Image const mask= test::drawMask(image);
+
+  auto            start= std::chrono::steady_clock::now();
+  FillBiLin const f(&mask(0, 0), image.cols(), image.rows());
+  auto            way1= std::chrono::steady_clock::now();
+#define SOLVE 0
+#if SOLVE
+  f(&image(0, 0));
+  auto end= std::chrono::steady_clock::now();
+#endif
+
+  std::chrono::duration<double> t1= way1 - start;
+#if SOLVE
+  std::chrono::duration<double> t2= end - way1;
+#endif
+  cout << "\ntime to construct: " << t1.count() << " s\n" << endl;
+#if SOLVE
+  cout << "time to solve: " << t2.count() << " s" << endl;
+#endif
 }
 
 

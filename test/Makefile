@@ -3,7 +3,7 @@
 
 CXX:=clang++
 CC:= $(CXX)
-CXXFLAGS:= -Wall -g -O0 -std=c++17
+CXXFLAGS:= -Wall -g -O3 -std=c++17
 CPPFLAGS:= -I../include
 LDLIBS:= -lCatch2Main -lCatch2
 
