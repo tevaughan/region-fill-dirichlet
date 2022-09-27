@@ -104,7 +104,7 @@ class FillBiLin {
   /// \param rgt  Right  unbinned column.
   void eliminateSquareFromMask(int top, int lft, int bot, int rgt);
 
-  void registerSquares(ArrayXX<bool> const &valid, int bf) {
+  template<typename T> void registerSquares(T const &valid, int bf) {
     for(int c= 0; c < valid.cols(); ++c) {
       for(int r= 0; r < valid.rows(); ++r) {
         if(valid(r, c)) registerSquare(r, c, bf);
@@ -131,7 +131,7 @@ class FillBiLin {
     // Identify interpolable squares at current level.
     auto const loValid= impl::validSquare(lo);
     // Make recursive call only if enough interpolable squares.
-    if(nr >= 8 && nc >= 8 && loValid.cast<int>().sum() >= 4) {
+    if(nr >= 8 && nc >= 8) {
       // Make recursive call.
       registerSquares(loValid && !impl::unbin2x2(binMask(lo, bf * 2)), bf);
     } else {

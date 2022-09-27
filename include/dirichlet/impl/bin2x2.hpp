@@ -25,9 +25,9 @@ using Eigen::seq;
 /// \param  a  Array to bin.
 /// \return    Binned array.
 ///
-auto bin2x2(ArrayXX<bool> const &a) {
-  int const nr= a.rows();
-  int const nc= a.cols();
+template<typename T> auto bin2x2(T const &a) {
+  auto const nr= a.rows();
+  auto const nc= a.cols();
   if(nr < 2) throw "too few rows";
   if(nc < 2) throw "too few cols";
   if(nr != nr / 2 * 2) throw "number of rows not even";

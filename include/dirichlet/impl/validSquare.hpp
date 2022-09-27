@@ -22,24 +22,23 @@ using Eigen::seq;
 /// \param  a  Array to test.
 /// \return    Result of test.
 ///
-inline auto validSquare(ArrayXX<bool> const &a) {
-  int const     nr= a.rows();
-  int const     nc= a.cols();
-  ArrayXX<bool> b = ArrayXX<bool>::Zero(nr, nc);
-  if(nr < 3 || nc < 3) throw "a too small";
-  auto const cenr= seq(1, nr - 2);
-  auto const cenc= seq(1, nc - 2);
-  auto const topr= seq(0, nr - 3);
-  auto const botr= seq(2, nr - 1);
-  auto const lftc= seq(0, nc - 3);
-  auto const rgtc= seq(2, nc - 1);
-  auto const top = a(topr, cenc);
-  auto const bot = a(botr, cenc);
-  auto const lft = a(cenr, lftc);
-  auto const rgt = a(cenr, rgtc);
-  auto const cen = a(cenr, cenc);
-  b(cenr, cenc)  = top && bot && lft && rgt && cen;
-  return b;
+inline ArrayXX<bool> validSquare(ArrayXX<bool> const &a) {
+  auto const    nr  = a.rows();
+  auto const    nc  = a.cols();
+  ArrayXX<bool> b   = ArrayXX<bool>::Zero(nr + 2, nc + 2);
+  auto const    cenr= seq(1, nr);
+  auto const    cenc= seq(1, nc);
+  b(cenr, cenc)     = a;
+  auto const topr   = seq(0, nr - 1);
+  auto const botr   = seq(2, nr + 1);
+  auto const lftc   = seq(0, nc - 1);
+  auto const rgtc   = seq(2, nc + 1);
+  auto const top    = b(topr, cenc);
+  auto const bot    = b(botr, cenc);
+  auto const lft    = b(cenr, lftc);
+  auto const rgt    = b(cenr, rgtc);
+  auto const cen    = b(cenr, cenc);
+  return top && bot && lft && rgt && cen;
 }
 
 
