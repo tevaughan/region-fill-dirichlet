@@ -161,6 +161,15 @@ class FillBiLin {
   /// \param w  Width  of image.
   void populateInteriorWeights(int h, int w);
 
+  template<typename I> VectorXf solve(I const &im) const;
+
+  /// Copy solution back into original image.
+  /// \tparam I      Type of single-component image.
+  /// \param  image  Reference to single-component image.
+  /// \param  x      Solution.
+  template<typename I>
+  void copySolutionBackIntoImage(I &im, VectorXf const &x) const;
+
 public:
   /// Set up linear problem by analyzing mask.
   /// \tparam P       Type of each pixel-value in mask.
@@ -248,8 +257,7 @@ public:
   /// should be solved for.
   ArrayXX<bool> const &extendedMask() const { return extendedMask_; }
 
-  template<typename I> VectorXf solve(I const &im) const;
-  template<typename C> VectorXf operator()(C *image, int stride) const;
+  template<typename C> VectorXf operator()(C *image, int stride= 1) const;
 };
 
 
@@ -268,6 +276,11 @@ namespace dirichlet {
 using Eigen::seq;
 using Eigen::Stride;
 using Eigen::Triplet;
+using std::is_const_v;
+using std::is_floating_point_v;
+using std::is_integral_v;
+using std::is_same_v;
+using std::is_unsigned_v;
 using std::vector;
 
 
@@ -513,10 +526,43 @@ template<typename I> VectorXf FillBiLin::solve(I const &im) const {
 }
 
 
+template<typename I>
+void FillBiLin::copySolutionBackIntoImage(I &im, VectorXf const &x) const {
+  using C                   = typename I::Scalar;
+  constexpr bool is_integral= is_integral_v<C>;
+  // Image is row-major.
+  auto const ii= /*col*/ coords_.col(0) * w() + /*row*/ coords_.col(1);
+  if constexpr(is_integral) {
+    if constexpr(is_unsigned_v<C>) {
+      im(ii)= (x.array() + 0.5f).cast<C>();
+    } else {
+      auto const neg= (x.array() < 0.0f).cast<C>();
+      auto const rup= (x.array() + 0.5f).cast<C>();
+      auto const rdn= (x.array() - 0.5f).cast<C>();
+      // Round in correct direction.
+      im.reshaped()(ii)= neg * rdn + (C(1) - neg) * rup;
+    }
+  } else {
+    if constexpr(is_same_v<float, C>) {
+      im.reshaped()(ii)= x.array();
+    } else {
+      im.reshaped()(ii)= x.array().cast<C>();
+    }
+  }
+}
+
+
 template<typename C>
 VectorXf FillBiLin::operator()(C *image, int stride) const {
   impl::ImageMap<C> im(image, h(), w(), stride);
-  VectorXf const    x= solve(im);
+  VectorXf const    x          = solve(im);
+  constexpr bool    is_const   = is_const_v<C>;
+  constexpr bool    is_integral= is_integral_v<C>;
+  constexpr bool    is_fp      = is_floating_point_v<C>;
+  if constexpr(!is_const && (is_integral || is_fp)) {
+    copySolutionBackIntoImage(im, x);
+  }
+  return x;
 }
 
 

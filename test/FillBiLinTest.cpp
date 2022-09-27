@@ -507,7 +507,7 @@ TEST_CASE("Big image.", "[FillBiLin]") {
   auto            start= std::chrono::steady_clock::now();
   FillBiLin const f(&mask(0, 0), image.cols(), image.rows());
   auto            way1= std::chrono::steady_clock::now();
-#define SOLVE 0
+#define SOLVE 1
 #if SOLVE
   f(&image(0, 0));
   auto end= std::chrono::steady_clock::now();
@@ -522,6 +522,7 @@ TEST_CASE("Big image.", "[FillBiLin]") {
   cout << "time to solve: " << t2.count() << " s" << endl;
 #endif
   test::pgm::write("central-weight.pgm", f.weights().cen().cast<int>());
+  test::pgm::write("gray-bilin.pgm", image.cast<int>());
 }
 
 
