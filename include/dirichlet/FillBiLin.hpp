@@ -24,6 +24,7 @@ using Eigen::ArrayXXi;
 using Eigen::seq;
 using Eigen::SimplicialCholesky;
 using Eigen::SparseMatrix;
+using Eigen::VectorXf;
 using std::cerr;
 using std::endl;
 
@@ -246,6 +247,9 @@ public:
   /// corresponding pixel both be not involved in any square interpolant and
   /// should be solved for.
   ArrayXX<bool> const &extendedMask() const { return extendedMask_; }
+
+  template<typename I> VectorXf solve(I const &im) const;
+  template<typename C> VectorXf operator()(C *image, int stride) const;
 };
 
 
@@ -467,6 +471,52 @@ FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
   populateEdgeWeights(h, w);
   populateInteriorWeights(h, w);
   initMatrix();
+}
+
+
+template<typename I> VectorXf FillBiLin::solve(I const &im) const {
+  // For each value to be solved for, linear offset of pixel in image.
+  auto const iOff= coords_.col(0) + h() * coords_.col(1);
+  // For each value to be solved for, weight of neighbor.
+  auto const wt= weights_.top().reshaped()(iOff);
+  auto const wb= weights_.bot().reshaped()(iOff);
+  auto const wl= weights_.lft().reshaped()(iOff);
+  auto const wr= weights_.rgt().reshaped()(iOff);
+  // For each value to be solved for, offset neighbor's relevant row or col.
+  // Use zero for offset if corresponding weight be zero so that offset is
+  // always in bounds, even for central pixel on edge of image.
+  auto const rt= (wt != 0).cast<int>() * coords_.col(0) - 1;
+  auto const rb= (wb != 0).cast<int>() * coords_.col(0) + 1;
+  auto const cl= (wl != 0).cast<int>() * coords_.col(1) - 1;
+  auto const cr= (wr != 0).cast<int>() * coords_.col(1) + 1;
+  // For each value to be solved for, linear offset of neighbor in image.  When
+  // weight of neighbor be zero, offset is wrong but always in bounds, even for
+  // central pixel on edge of image.
+  auto const tOff= rt + h() * coords_.col(1);
+  auto const bOff= rb + h() * coords_.col(1);
+  auto const lOff= coords_.col(0) + h() * cl;
+  auto const rOff= coords_.col(0) + h() * cr;
+  // For each value to be solved for, true if neighbor not solved for.
+  auto const ft= 1.0f - extendedMask_.reshaped()(tOff).cast<float>();
+  auto const fb= 1.0f - extendedMask_.reshaped()(bOff).cast<float>();
+  auto const fl= 1.0f - extendedMask_.reshaped()(lOff).cast<float>();
+  auto const fr= 1.0f - extendedMask_.reshaped()(rOff).cast<float>();
+  // For each value to be solved for, value of neighbor on boundary.
+  auto const imf= im.template cast<float>();
+  auto const nt = wt.cast<float>() * ft * imf.reshaped()(tOff);
+  auto const nb = wb.cast<float>() * fb * imf.reshaped()(bOff);
+  auto const nl = wl.cast<float>() * fl * imf.reshaped()(lOff);
+  auto const nr = wr.cast<float>() * fr * imf.reshaped()(rOff);
+  // Do solution.
+  VectorXf const b= -(nt + nb + nl + nr);
+  return A_->solve(b);
+}
+
+
+template<typename C>
+VectorXf FillBiLin::operator()(C *image, int stride) const {
+  impl::ImageMap<C> im(image, h(), w(), stride);
+  VectorXf const    x= solve(im);
 }
 
 
