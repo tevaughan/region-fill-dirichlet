@@ -149,7 +149,7 @@ mask-image $M_i.$
 
 After construction of the binned images, next
 consider them, beginning with $k,$ in reverse
-order (for each $i\in\{k,k-1,\dots,1\}$).
+order, for each $i\in(k,k-1,\dots,1).$
 
 For each $M_i$ in $M_k,M_{k-1},\ldots,M_1,$ find
 each superpixel $p$ that is the center of a
