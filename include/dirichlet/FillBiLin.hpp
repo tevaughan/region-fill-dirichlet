@@ -322,8 +322,11 @@ void FillBiLin::registerSquare(int r, int c, int bf) {
 
 
 void FillBiLin::registerSquareWeights(int top, int lft, int bot, int rgt) {
-  auto const crnrRows= seq(top, bot, bot - top);
-  auto const crnrCols= seq(lft, rgt, rgt - lft);
+  // Distance (pixels) from one edge to other.
+  // Should be same as `rgt - lft`.
+  int const  s       = bot - top;
+  auto const crnrRows= seq(top, bot, s);
+  auto const crnrCols= seq(lft, rgt, s);
   auto const edgeRows= seq(top + 1, bot - 1);
   auto const edgeCols= seq(lft + 1, rgt - 1);
   // Write weights for corners.
@@ -333,33 +336,21 @@ void FillBiLin::registerSquareWeights(int top, int lft, int bot, int rgt) {
   weights_.rgt()(crnrRows, crnrCols)= +1;
   weights_.cen()(crnrRows, crnrCols)= -4;
   // Write weights for vertical edges.
-  weights_.top()(edgeRows, crnrCols)= +1;
-  weights_.bot()(edgeRows, crnrCols)= +1;
-#if 1
-  weights_.lft()(edgeRows, lft)     = +1;
-  weights_.lft()(edgeRows, rgt)     = +0;
-  weights_.rgt()(edgeRows, lft)     = +0;
-  weights_.rgt()(edgeRows, rgt)     = +1;
-  weights_.cen()(edgeRows, crnrCols)= -3;
-#else
-  weights_.lft()(edgeRows, crnrCols)= +0;
-  weights_.rgt()(edgeRows, crnrCols)= +0;
-  weights_.cen()(edgeRows, crnrCols)= -2;
-#endif
+  weights_.top()(edgeRows, crnrCols)= +s;
+  weights_.bot()(edgeRows, crnrCols)= +s;
+  weights_.lft()(edgeRows, lft)     = +s;
+  weights_.lft()(edgeRows, rgt)     = +1;
+  weights_.rgt()(edgeRows, lft)     = +1;
+  weights_.rgt()(edgeRows, rgt)     = +s;
+  weights_.cen()(edgeRows, crnrCols)= -3 * s - 1;
   // Write weights for horizontal edges.
-#if 1
-  weights_.top()(top, edgeCols)     = +1;
-  weights_.top()(bot, edgeCols)     = +0;
-  weights_.bot()(top, edgeCols)     = +0;
-  weights_.bot()(bot, edgeCols)     = +1;
-  weights_.cen()(crnrRows, edgeCols)= -3;
-#else
-  weights_.top()(crnrRows, edgeCols)= +0;
-  weights_.bot()(crnrRows, edgeCols)= +0;
-  weights_.cen()(crnrRows, edgeCols)= -2;
-#endif
-  weights_.lft()(crnrRows, edgeCols)= +1;
-  weights_.rgt()(crnrRows, edgeCols)= +1;
+  weights_.top()(top, edgeCols)     = +s;
+  weights_.top()(bot, edgeCols)     = +1;
+  weights_.bot()(top, edgeCols)     = +1;
+  weights_.bot()(bot, edgeCols)     = +s;
+  weights_.lft()(crnrRows, edgeCols)= +s;
+  weights_.rgt()(crnrRows, edgeCols)= +s;
+  weights_.cen()(crnrRows, edgeCols)= -3 * s - 1;
 }
 
 
@@ -401,29 +392,29 @@ void FillBiLin::populateEdgeWeights(int h, int w) {
   auto const topMask         = extendedMask_(0, cols);
   auto const rgtMask         = extendedMask_(rows, w - 1);
   auto const botMask         = extendedMask_(h - 1, cols);
-  weights_.top()(rows, 0)    = lftMask.cast<int8_t>() * (+1);
-  weights_.rgt()(rows, 0)    = lftMask.cast<int8_t>() * (+1);
-  weights_.bot()(rows, 0)    = lftMask.cast<int8_t>() * (+1);
-  weights_.cen()(rows, 0)    = lftMask.cast<int8_t>() * (-3);
-  weights_.lft()(0, cols)    = topMask.cast<int8_t>() * (+1);
-  weights_.rgt()(0, cols)    = topMask.cast<int8_t>() * (+1);
-  weights_.bot()(0, cols)    = topMask.cast<int8_t>() * (+1);
-  weights_.cen()(0, cols)    = topMask.cast<int8_t>() * (-3);
-  weights_.top()(rows, w - 1)= rgtMask.cast<int8_t>() * (+1);
-  weights_.lft()(rows, w - 1)= rgtMask.cast<int8_t>() * (+1);
-  weights_.bot()(rows, w - 1)= rgtMask.cast<int8_t>() * (+1);
-  weights_.cen()(rows, w - 1)= rgtMask.cast<int8_t>() * (-3);
-  weights_.lft()(h - 1, cols)= botMask.cast<int8_t>() * (+1);
-  weights_.rgt()(h - 1, cols)= botMask.cast<int8_t>() * (+1);
-  weights_.top()(h - 1, cols)= botMask.cast<int8_t>() * (+1);
-  weights_.cen()(h - 1, cols)= botMask.cast<int8_t>() * (-3);
+  weights_.top()(rows, 0)    = lftMask.cast<int16_t>() * (+1);
+  weights_.rgt()(rows, 0)    = lftMask.cast<int16_t>() * (+1);
+  weights_.bot()(rows, 0)    = lftMask.cast<int16_t>() * (+1);
+  weights_.cen()(rows, 0)    = lftMask.cast<int16_t>() * (-3);
+  weights_.lft()(0, cols)    = topMask.cast<int16_t>() * (+1);
+  weights_.rgt()(0, cols)    = topMask.cast<int16_t>() * (+1);
+  weights_.bot()(0, cols)    = topMask.cast<int16_t>() * (+1);
+  weights_.cen()(0, cols)    = topMask.cast<int16_t>() * (-3);
+  weights_.top()(rows, w - 1)= rgtMask.cast<int16_t>() * (+1);
+  weights_.lft()(rows, w - 1)= rgtMask.cast<int16_t>() * (+1);
+  weights_.bot()(rows, w - 1)= rgtMask.cast<int16_t>() * (+1);
+  weights_.cen()(rows, w - 1)= rgtMask.cast<int16_t>() * (-3);
+  weights_.lft()(h - 1, cols)= botMask.cast<int16_t>() * (+1);
+  weights_.rgt()(h - 1, cols)= botMask.cast<int16_t>() * (+1);
+  weights_.top()(h - 1, cols)= botMask.cast<int16_t>() * (+1);
+  weights_.cen()(h - 1, cols)= botMask.cast<int16_t>() * (-3);
 }
 
 
 void FillBiLin::populateInteriorWeights(int h, int w) {
   auto const rows= seq(1, h - 2);
   auto const cols= seq(1, w - 2);
-  auto const mask= extendedMask_(rows, cols).cast<int8_t>();
+  auto const mask= extendedMask_(rows, cols).cast<int16_t>();
   weights_.top()(rows, cols)+= mask * (+1);
   weights_.bot()(rows, cols)+= mask * (+1);
   weights_.lft()(rows, cols)+= mask * (+1);
@@ -460,21 +451,43 @@ void FillBiLin::initMatrix() {
   // - Three coefficients for each solved-for pixel at corner of image.
   t.reserve(coords_.rows() * 5);
   for(int i= 0; i < coords_.rows(); ++i) {
-    int const r= coords_(i, 0);
-    int const c= coords_(i, 1);
-    t.push_back({i, i, weights_.cen()(r, c)});
-    int8_t const lw     = weights_.lft()(r, c);
-    int8_t const rw     = weights_.rgt()(r, c);
-    int8_t const tw     = weights_.top()(r, c);
-    int8_t const bw     = weights_.bot()(r, c);
-    bool const   lftSolv= (c > 0 && coordsMap_(r, c - 1) > -1);
-    bool const   topSolv= (r > 0 && coordsMap_(r - 1, c) > -1);
-    bool const   rgtSolv= (c < w() - 1 && coordsMap_(r, c + 1) > -1);
-    bool const   botSolv= (r < h() - 1 && coordsMap_(r + 1, c) > -1);
-    if(lw != 0 && lftSolv) t.push_back({i, coordsMap_(r, c - 1), lw});
-    if(rw != 0 && rgtSolv) t.push_back({i, coordsMap_(r, c + 1), rw});
-    if(tw != 0 && topSolv) t.push_back({i, coordsMap_(r - 1, c), tw});
-    if(bw != 0 && botSolv) t.push_back({i, coordsMap_(r + 1, c), bw});
+    // FIXME: THIS LOOP NEEDS TO BE ADJUSTED TO HANDLE SIDE OF EACH
+    // INTERPOLABLE SQUARE!  IT IS BROKEN UNTIL THAT IS DONE!
+    int const r = coords_(i, 0);
+    int const c = coords_(i, 1);
+    int const cw= weights_.cen()(r, c);
+    int const lw= weights_.lft()(r, c);
+    int const rw= weights_.rgt()(r, c);
+    int const tw= weights_.top()(r, c);
+    int const bw= weights_.bot()(r, c);
+    t.push_back({i, i, 1.0f});
+    int lOff= coordsMap_(r, c - 1);
+    int tOff= coordsMap_(r - 1, c);
+    int rOff= coordsMap_(r, c + 1);
+    int bOff= coordsMap_(r + 1, c);
+    if(cw < -4) {
+      int const s= (-cw - 1) / 3;
+      if(lw == 1) {
+        lOff= coordsMap_(r, c - s);
+      } else if(rw == 1) {
+        rOff= coordsMap_(r, c + s);
+      } else if(tw == 1) {
+        tOff= coordsMap_(r - s, c);
+      } else if(bw == 1) {
+        bOff= coordsMap_(r + s, c);
+      } else {
+        throw "cw < -4 but no side has unit-value";
+      }
+    }
+    bool const  lftSolv= (c > 0 && lOff > -1);
+    bool const  topSolv= (r > 0 && tOff > -1);
+    bool const  rgtSolv= (c < w() - 1 && rOff > -1);
+    bool const  botSolv= (r < h() - 1 && bOff > -1);
+    float const norm   = 1.0f / cw;
+    if(lw != 0 && lftSolv) t.push_back({i, lOff, lw * norm});
+    if(rw != 0 && rgtSolv) t.push_back({i, rOff, rw * norm});
+    if(tw != 0 && topSolv) t.push_back({i, tOff, tw * norm});
+    if(bw != 0 && botSolv) t.push_back({i, bOff, bw * norm});
   }
   a_= SparseMatrix<float>(coords_.rows(), coords_.rows());
   a_.setFromTriplets(t.begin(), t.end());
@@ -521,11 +534,16 @@ template<typename I> VectorXf FillBiLin::solve(I const &im) {
     int const c= coords_(i, 1);
     if(extendedMask_(r, c)) {
       // Value at (r,c) is to be solved for.
-      int const s= cm(r, c);
-      if(r > 0 && cm(r - 1, c) == -1) b_(s)-= w.top()(r, c) * im(r - 1, c);
-      if(c > 0 && cm(r, c - 1) == -1) b_(s)-= w.lft()(r, c) * im(r, c - 1);
-      if(r < B && cm(r + 1, c) == -1) b_(s)-= w.bot()(r, c) * im(r + 1, c);
-      if(c < R && cm(r, c + 1) == -1) b_(s)-= w.rgt()(r, c) * im(r, c + 1);
+      int const   s   = cm(r, c);
+      float const norm= 1.0f / w.cen()(r, c);
+      float const wt  = w.top()(r, c) * norm;
+      float const wl  = w.lft()(r, c) * norm;
+      float const wb  = w.bot()(r, c) * norm;
+      float const wr  = w.rgt()(r, c) * norm;
+      if(r > 0 && cm(r - 1, c) == -1) b_(s)-= wt * im(r - 1, c);
+      if(c > 0 && cm(r, c - 1) == -1) b_(s)-= wl * im(r, c - 1);
+      if(r < B && cm(r + 1, c) == -1) b_(s)-= wb * im(r + 1, c);
+      if(c < R && cm(r, c + 1) == -1) b_(s)-= wr * im(r, c + 1);
     }
   }
   return A_->solve(b_);
@@ -537,7 +555,7 @@ void FillBiLin::copySolutionBackIntoImage(I &im, VectorXf const &x) const {
   using C                   = typename I::Scalar;
   constexpr bool is_integral= is_integral_v<C>;
   // Image is row-major.
-  //auto const ii= /*col*/ coords_.col(0) * w() + /*row*/ coords_.col(1);
+  // auto const ii= /*col*/ coords_.col(0) * w() + /*row*/ coords_.col(1);
   auto const ii= coords_.col(0) + h() * coords_.col(1);
   if constexpr(is_integral) {
     if constexpr(is_unsigned_v<C>) {
@@ -559,8 +577,7 @@ void FillBiLin::copySolutionBackIntoImage(I &im, VectorXf const &x) const {
 }
 
 
-template<typename C>
-VectorXf FillBiLin::operator()(C *image, int stride) {
+template<typename C> VectorXf FillBiLin::operator()(C *image, int stride) {
   impl::ImageMap<C> im(image, h(), w(), stride);
   VectorXf const    x          = solve(im);
   constexpr bool    is_const   = is_const_v<C>;

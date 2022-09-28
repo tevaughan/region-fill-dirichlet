@@ -82,68 +82,97 @@ seems natural.  Although the bilinear
 interpolant is linear along each
 coordinate-axis, it is quadratic along any other
 direction.  Anyway, the bilinear interpolant
-satisfies Laplace's equation.  So, if the
-corners of the square participate in a global
-solution to Laplace's equation, then the
-interpolant provides a local solution that is at
-least continuous with the global one.
+satisfies Laplace's equation.  So, if the border
+of the square participate in a global solution
+to Laplace's equation, then the interpolant
+provides a local solution that is at least
+continuous with the global one.
 
 What I propose is a hierarchical approach, in
 which the deepest portions of the region to be
 filled have the largest interpolated squares,
 shallower portions have smaller interpolated
 squares, and, in the shallowest portions, every
-pixel participates in the global, finite-element
-solution to Laplace's equation.
+individual pixel participates in a
+finite-element solution to Laplace's equation.
 
-### Prepare Mask
+### Prepare Image and Mask
 
-Consider a mask $M$, which is the same size
-$W \times H$ as the original image but with
-value of 1 at each pixel to be filled and 0 at
-each pixel not to be filled.  Extend $M$ to a
-larger mask $M_0$ by appending zeros toward the
-lower right of $M$ until the width $W_0$ of
-$M_0$ is the smallest power of two greater than
-or equal to $W$; similarly, for $H_0$ and $H$.
+Consider an image $I$ and a mask $M$, each of
+size ${W}\times{H}.$  Let the mask have value of
+1 at each pixel to be filled and 0 at each pixel
+not to be filled.  Require that no pixel in mask
+be set to one at edge of mask.
+
+Extend $I$ to a larger image $I_0$ by
+replicating its border-values until, for the
+smallest integer $w,$ the width of $I_0$ is
+$W_0={2^w}\geq{2W}$ and, for the smallest
+integer $h,$, the height is $H_0={2^h}\geq{H}.$
+After this extension, the original image should
+be roughly centered within a larger image whose
+border has been replicated to equal thickness
+along every side.
+
+Similarly, extend $M$ to a larger mask $M_0$ but
+by replicating zeros outside $M$.
 
 ### Find Squares Over Which To Interpolate
 
 Construct every successive, binned image of
-$M_0.$  First $M_1$, which has $W_1=W_0/2$, has
-$H_1=H_0/2$, and is binned into superpixels of
-$2 \times 2$ pixels each; then $M_2$,
-$4 \times 4$; $M_3$, $8 \times 8$; etc.  In each
-case, a superpixel contains the sum of the four
-corresponding pixel-values in the mask at the
-next higher stage of resolution.  Construct
-$M_1, M_2, \ldots, M_k$, where $k$ is the
-largest value such that both $W_k \geq 4$ and
-$H_k \geq 4$.
+$I_0$ and $M_0.$  First,
 
-After construction of the binned mask-images,
-consider them, beginning with $M_k,$ in reverse
-order.
+- $I_1$ and $M_1$, each of which has
+  $W_1=W_0/2$, has $H_1=H_0/2$, and is binned
+  into superpixels of ${2}\times{2}$ unbinned
+  pixels each; then
 
-For each image $M_i$ in
-$M_k, M_{k-1}, \ldots, M_2,$ find every pixel
-$p$ whose value is $2^{2i}$ and for which every
-one of $p$'s four neighbors also has value
-$2^{2i}$.  Record the corner-pixels of $p$ in
-the unbinned image as to be solved for with the
-ordinary, two-dimensional Laplacian.  Record the
-edge-pixels along each horizontal or vertical
-line connecting the corner-pixels as to be
-solved for with the one-dimensional Laplacian
-oriented along the edge between the corners.
-Mark $p$'s interior pixels in the unbinned image
-as to be interpolated from the corners.  Mark
-every mask-pixel corresponding to $p$ in
-$M_{i-1}, M_{i-2}, \ldots, M_2$ as zero.
+- $I_2$ and $M_2$, each with superpixels of
+  ${4}\times{4}$ unbinned pixels;
 
-Mark every remaining pixel in unbinned mask as
-usual for ordinary solution to Laplace's
-equation.
+- $I_3$ and $M_3$, each with ${8}\times{8}$
+  superpixels; etc.
+
+In each case, a superpixel contains the sum of
+the four corresponding pixel-values at the next
+higher stage of resolution.
+
+Construct $I_1,I_2,\ldots,I_k,$ and
+$M_1,M_2,\ldots,M_k,$ where $k$ is the largest
+value such that both ${W_k}\geq{4}$ and
+${H_k}\geq{4}.$  At each stage
+$i\in\{1,\ldots,k\}$ of binning, pay attention
+to the mask-images $M_i,$ and store the location
+of each superpixel $p,$ which is the center of a
+${3}\times{3}$ block of superpixels, every one
+of which has value $2^{2i}$ in the binned
+mask-image $M_i.$
+
+After construction of the binned images, next
+consider them, beginning with $k,$ in reverse
+order (for each $i\in\{k,k-1,\dots,1\}$).
+
+For each $M_i$ in $M_k,M_{k-1},\ldots,M_1,$ find
+each superpixel $p$ that is the center of a
+${3}\times{3}$ block of full-valued pixels.
+When at least one such block exists, solve the
+Dirichlet-problem at this binning level for the
+value of every pixel that, in the mask-image,
+has non-zero value.  Use a superpixel in $I_i$
+as boundary-value whenever the corresponding
+superpixel in $M_i$ has zero value. Suppose that
+the solved-for value applies at the center of
+each solved-for superpixel, and linearly
+interpolate values across each central $p$ to
+fill in every unbinned pixel that corresponds to
+$p$.  Redo the binning for $p$ from the bottom
+up in $I_1,\ldots,I_{i-1},$ and reset to zero
+every pixel corresponding to $p$ in every
+higher-resolution masks $M_{i-1},\ldots,M_1.$
+Then proceed to $i-1$ and repeat.
+
+As a last step, solve the Dirichlet problem for
+the remaining unbinned pixels.
 
 ### Prepare Linear Model
 
@@ -155,33 +184,6 @@ size of the linear problem.  The time to factor
 the matrix and to render the solution should be
 greatly reduced for any sufficiently large
 region of pixels to be filled.
-
-### Bilinear Interpolation
-
-After the problem is solved, the interior of
-each superpixel must be filled with the values
-obtained by bilinearly interpolating the
-corner-values, which were solved for.  (The edge
-along the side of each superpixel does not need
-to be interpolated because the values were
-solved for, but those values are the same as
-would be obtained by interpolation because the
-one-dimensional Laplacian was used along the
-edge.)
-
-Because the bilinear interpolant is a
-low-polynimal-order solution to Laplace's
-equation over the coordinates of the grid, what
-this approach does is, while solving Laplace's
-equation globally for the corners of
-superpixels, to mandate a low-order solution
-over interior of each superpixel.  But if
-superpixels reside only in the deep interior of
-the filled region, this is precisely where the
-solution is likely to be of low order anyway.
-So a large increase in speed can be obtained
-with minimal error relative to the full
-solution.
 
 ## Old Design Under Namespace `regfill`
 

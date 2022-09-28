@@ -20,16 +20,21 @@ using std::vector;
 
 /// For each pixel in image, store value for each of left, right, top, bottom,
 /// and center of cruciform pattern of weights for use in solving
-/// Dirichlet-problem.  Each weight is stored as single-byte integer.
+/// Dirichlet-problem.  Each weight is stored as two-byte integer.
 class Weights {
   vector<uint64_t> s_; ///< Storage-space for weights.
   int              h_; ///< Height of image.
   int              w_; ///< Width of image.
 
-  /// Number of `uint64_t` needed for storing `numBytes` bytes.
-  /// \param nBytes  Number of bytes to store.
-  /// \return        Number of `uint64_t` needed to store `nBytes` bytes.
-  static int nWords(int nBytes) { return nBytes / sizeof(uint64_t) + 1; }
+  /// Type for each weight.
+  using W= int16_t;
+
+  /// Number of `uint64_t` words needed for storing `nWeights` weights.
+  /// \param nWeights  Number of weights to store.
+  /// \return          Number of `uint64_t` needed for `nWeights` weights.
+  static int nWords(int nWeights) {
+    return sizeof(W) * nWeights / sizeof(uint64_t) + 1;
+  }
 
   /// Offset of each weight.
   enum WeightOffset { LFT, RGT, TOP, BOT, CEN, NUM_WEIGHTS };
@@ -38,16 +43,16 @@ class Weights {
   using Stride= InnerStride<NUM_WEIGHTS>;
 
   /// Type of array for non-const element.
-  using Map= Eigen::Map<ArrayXX<int8_t>, Unaligned, Stride>;
+  using Map= Eigen::Map<ArrayXX<W>, Unaligned, Stride>;
 
   /// Type of array for const element.
-  using ConstMap= Eigen::Map<ArrayXX<int8_t> const, Unaligned, Stride>;
+  using ConstMap= Eigen::Map<ArrayXX<W> const, Unaligned, Stride>;
 
   /// Expression-template for weight at specified offset.
   /// \param off  Offset of weight in pattern.
   /// \return     Expression template for array of weights at same offset.
   auto weight(int off) {
-    int8_t *first= ((int8_t *)&s_[0]) + off;
+    W *first= ((W *)&s_[0]) + off;
     return Map(first, h_, w_);
   }
 
@@ -55,7 +60,7 @@ class Weights {
   /// \param off  Offset of weight in pattern.
   /// \return     Expression template for array of weights at same offset.
   auto weight(int off) const {
-    int8_t const *first= ((int8_t const *)&s_[0]) + off;
+    W const *first= ((W const *)&s_[0]) + off;
     return ConstMap(first, h_, w_);
   }
 
