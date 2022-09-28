@@ -101,8 +101,7 @@ finite-element solution to Laplace's equation.
 Consider an image $I$ and a mask $M$, each of
 size ${W}\times{H}.$  Let the mask have value of
 1 at each pixel to be filled and 0 at each pixel
-not to be filled.  Require that no pixel in mask
-be set to one at edge of mask.
+not to be filled.
 
 Extend $I$ to a larger image $I_0$ by
 replicating its border-values until, for the
