@@ -76,6 +76,8 @@ class FillBiLin {
   /// Pointer to Cholesky-decomposition of square matrix for linear problem.
   SimplicialCholesky<SparseMatrix<float>> *A_= nullptr;
 
+  VectorXf b_;
+
   /// Extend mask with with zeros so that it is power of two along each
   /// dimension, and convert to array of boolean.
   /// \tparam P       Type of each pixel-value in mask.
@@ -161,7 +163,7 @@ class FillBiLin {
   /// \param w  Width  of image.
   void populateInteriorWeights(int h, int w);
 
-  template<typename I> VectorXf solve(I const &im) const;
+  template<typename I> VectorXf solve(I const &im);
 
   /// Copy solution back into original image.
   /// \tparam I      Type of single-component image.
@@ -257,7 +259,12 @@ public:
   /// should be solved for.
   ArrayXX<bool> const &extendedMask() const { return extendedMask_; }
 
-  template<typename C> VectorXf operator()(C *image, int stride= 1) const;
+  template<typename C> VectorXf operator()(C *image, int stride= 1);
+
+  /// Square matrix for linear problem.
+  SparseMatrix<float> const &a() const { return a_; }
+
+  VectorXf const &b() const { return b_; }
 };
 
 
@@ -328,15 +335,31 @@ void FillBiLin::registerSquareWeights(int top, int lft, int bot, int rgt) {
   // Write weights for vertical edges.
   weights_.top()(edgeRows, crnrCols)= +1;
   weights_.bot()(edgeRows, crnrCols)= +1;
+#if 1
+  weights_.lft()(edgeRows, lft)     = +1;
+  weights_.lft()(edgeRows, rgt)     = +0;
+  weights_.rgt()(edgeRows, lft)     = +0;
+  weights_.rgt()(edgeRows, rgt)     = +1;
+  weights_.cen()(edgeRows, crnrCols)= -3;
+#else
   weights_.lft()(edgeRows, crnrCols)= +0;
   weights_.rgt()(edgeRows, crnrCols)= +0;
   weights_.cen()(edgeRows, crnrCols)= -2;
+#endif
   // Write weights for horizontal edges.
+#if 1
+  weights_.top()(top, edgeCols)     = +1;
+  weights_.top()(bot, edgeCols)     = +0;
+  weights_.bot()(top, edgeCols)     = +0;
+  weights_.bot()(bot, edgeCols)     = +1;
+  weights_.cen()(crnrRows, edgeCols)= -3;
+#else
   weights_.top()(crnrRows, edgeCols)= +0;
   weights_.bot()(crnrRows, edgeCols)= +0;
+  weights_.cen()(crnrRows, edgeCols)= -2;
+#endif
   weights_.lft()(crnrRows, edgeCols)= +1;
   weights_.rgt()(crnrRows, edgeCols)= +1;
-  weights_.cen()(crnrRows, edgeCols)= -2;
 }
 
 
@@ -444,10 +467,10 @@ void FillBiLin::initMatrix() {
     int8_t const rw     = weights_.rgt()(r, c);
     int8_t const tw     = weights_.top()(r, c);
     int8_t const bw     = weights_.bot()(r, c);
-    bool const   lftSolv= (c > 0 && extendedMask_(r, c - 1));
-    bool const   topSolv= (r > 0 && extendedMask_(r - 1, c));
-    bool const   rgtSolv= (c < w() - 1 && extendedMask_(r, c + 1));
-    bool const   botSolv= (r < h() - 1 && extendedMask_(r + 1, c));
+    bool const   lftSolv= (c > 0 && coordsMap_(r, c - 1) > -1);
+    bool const   topSolv= (r > 0 && coordsMap_(r - 1, c) > -1);
+    bool const   rgtSolv= (c < w() - 1 && coordsMap_(r, c + 1) > -1);
+    bool const   botSolv= (r < h() - 1 && coordsMap_(r + 1, c) > -1);
     if(lw != 0 && lftSolv) t.push_back({i, coordsMap_(r, c - 1), lw});
     if(rw != 0 && rgtSolv) t.push_back({i, coordsMap_(r, c + 1), rw});
     if(tw != 0 && topSolv) t.push_back({i, coordsMap_(r - 1, c), tw});
@@ -487,56 +510,25 @@ FillBiLin::FillBiLin(P const *msk, int w, int h, int stride):
 }
 
 
-template<typename I> VectorXf FillBiLin::solve(I const &im) const {
-  // For each value to be solved for, linear offset of pixel in image.
-  ArrayXi const iOff= coords_.col(0) + h() * coords_.col(1);
-  // For each value to be solved for, weight of neighbor.
-  using Eigen::ArrayX;
-  ArrayX<int8_t> const wt= weights_.top().reshaped()(iOff);
-  ArrayX<int8_t> const wb= weights_.bot().reshaped()(iOff);
-  ArrayX<int8_t> const wl= weights_.lft().reshaped()(iOff);
-  ArrayX<int8_t> const wr= weights_.rgt().reshaped()(iOff);
-  // For each value to be solved for, offset neighbor's relevant row or col.
-  // Use zero for offset if corresponding weight be zero so that offset is
-  // always in bounds, even for central pixel on edge of image.
-  ArrayXi const rt= (wt != 0).cast<int>() * (coords_.col(0) - 1);
-  ArrayXi const rb= (wb != 0).cast<int>() * (coords_.col(0) + 1);
-  ArrayXi const cl= (wl != 0).cast<int>() * (coords_.col(1) - 1);
-  ArrayXi const cr= (wr != 0).cast<int>() * (coords_.col(1) + 1);
-  // For each value to be solved for, linear offset of neighbor in image.  When
-  // weight of neighbor be zero, offset is wrong but always in bounds, even for
-  // central pixel on edge of image.
-  ArrayXi const tOff= rt + h() * coords_.col(1);
-  ArrayXi const bOff= rb + h() * coords_.col(1);
-  ArrayXi const lOff= coords_.col(0) + h() * cl;
-  ArrayXi const rOff= coords_.col(0) + h() * cr;
-  // For each value to be solved for, true if neighbor to be solved for.
-  auto const fnt= extendedMask_.reshaped()(tOff);
-  auto const fnb= extendedMask_.reshaped()(bOff);
-  auto const fnl= extendedMask_.reshaped()(lOff);
-  auto const fnr= extendedMask_.reshaped()(rOff);
-  // For each value to be solved for, true if both neighbor not solved for and
-  // neighbor's weight not zero.  This is condition for neighbor's being
-  // a boundary-value.
-  using Eigen::ArrayXf;
-  ArrayXf const ft= (1.0f - fnt.cast<float>()) * (wt != 0).cast<float>();
-  ArrayXf const fb= (1.0f - fnb.cast<float>()) * (wb != 0).cast<float>();
-  ArrayXf const fl= (1.0f - fnl.cast<float>()) * (wl != 0).cast<float>();
-  ArrayXf const fr= (1.0f - fnr.cast<float>()) * (wr != 0).cast<float>();
-  // For each value to be solved for, value of neighbor on boundary.
-  using Eigen::ArrayXXf;
-  ArrayXXf const imf= im.template cast<float>();
-  ArrayXf const wtf= wt.cast<float>();
-  ArrayXf const wbf= wb.cast<float>();
-  ArrayXf const wlf= wl.cast<float>();
-  ArrayXf const wrf= wr.cast<float>();
-  ArrayXf const  nt = wtf * ft * imf.reshaped()(tOff);
-  ArrayXf const  nb = wbf * fb * imf.reshaped()(bOff);
-  ArrayXf const  nl = wlf * fl * imf.reshaped()(lOff);
-  ArrayXf const  nr = wrf * fr * imf.reshaped()(rOff);
-  // Do solution.
-  VectorXf const b= nt + nb + nl + nr;
-  return A_->solve(-b);
+template<typename I> VectorXf FillBiLin::solve(I const &im) {
+  int const   R = w() - 1;
+  int const   B = h() - 1;
+  auto const &cm= coordsMap_;
+  auto const &w = weights_;
+  b_            = VectorXf::Zero(nSolvePix_);
+  for(int i= 0; i < coords_.rows(); ++i) {
+    int const r= coords_(i, 0);
+    int const c= coords_(i, 1);
+    if(extendedMask_(r, c)) {
+      // Value at (r,c) is to be solved for.
+      int const s= cm(r, c);
+      if(r > 0 && cm(r - 1, c) == -1) b_(s)-= w.top()(r, c) * im(r - 1, c);
+      if(c > 0 && cm(r, c - 1) == -1) b_(s)-= w.lft()(r, c) * im(r, c - 1);
+      if(r < B && cm(r + 1, c) == -1) b_(s)-= w.bot()(r, c) * im(r + 1, c);
+      if(c < R && cm(r, c + 1) == -1) b_(s)-= w.rgt()(r, c) * im(r, c + 1);
+    }
+  }
+  return A_->solve(b_);
 }
 
 
@@ -568,7 +560,7 @@ void FillBiLin::copySolutionBackIntoImage(I &im, VectorXf const &x) const {
 
 
 template<typename C>
-VectorXf FillBiLin::operator()(C *image, int stride) const {
+VectorXf FillBiLin::operator()(C *image, int stride) {
   impl::ImageMap<C> im(image, h(), w(), stride);
   VectorXf const    x          = solve(im);
   constexpr bool    is_const   = is_const_v<C>;
