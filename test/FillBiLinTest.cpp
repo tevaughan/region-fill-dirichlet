@@ -167,14 +167,14 @@ TEST_CASE("image3 works with mask3.", "[FillBiLin]") {
 }
 
 
-#if 0
+#if 1
 TEST_CASE("Big image.", "[FillBiLin]") {
-  test::Image image= test::pgm::read("gray.pgm");
-  test::Image const mask= test::drawMask(image);
+  test::Image       image= test::pgm::read("gray.pgm");
+  test::Image const mask = test::drawMask(image);
 
-  auto            start= std::chrono::steady_clock::now();
-  FillBiLin const f(&mask(0, 0), image.cols(), image.rows());
-  auto            way1= std::chrono::steady_clock::now();
+  auto      start= std::chrono::steady_clock::now();
+  FillBiLin f(&mask(0, 0), image.cols(), image.rows());
+  auto      way1= std::chrono::steady_clock::now();
 #define SOLVE 1
 #if SOLVE
   f(&image(0, 0));
