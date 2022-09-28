@@ -140,7 +140,7 @@ Construct $I_1,I_2,\ldots,I_k,$ and
 $M_1,M_2,\ldots,M_k,$ where $k$ is the largest
 value such that both ${W_k}\geq{4}$ and
 ${H_k}\geq{4}.$  At each stage
-$i\in\left\{1,\ldots,k\right\}$ of binning, pay
+$i\in\left{1,\ldots,k\right}$ of binning, pay
 attention to the mask-images $M_i,$ and store
 the location of each superpixel $p,$ which is
 the center of a ${3}\times{3}$ block of
