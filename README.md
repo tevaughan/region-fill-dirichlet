@@ -106,12 +106,12 @@ not to be filled.
 Extend $I$ to a larger image $I_0$ by
 replicating its border-values until, for the
 smallest integer $w,$ the width of $I_0$ is
-$W_0={2^w}\geq{2W}$ and, for the smallest
-integer $h,$ the height is $H_0={2^h}\geq{H}.$
-After this extension, the original image should
-be roughly centered within a larger image whose
-border has been replicated to equal thickness
-along every side.
+$W_0={2^w}\geq{2\:W}$ and, for the smallest
+integer $h,$ the height is
+$H_0={2^h}\geq{2\:H}.$ After this extension, the
+original image should be roughly centered within
+a larger image whose border has been replicated
+to equal thickness along every side.
 
 Similarly, extend $M$ to a larger mask $M_0$ but
 by replicating zeros outside $M$.
