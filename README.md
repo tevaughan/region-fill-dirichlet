@@ -140,12 +140,12 @@ Construct $I_1,I_2,\ldots,I_k,$ and
 $M_1,M_2,\ldots,M_k,$ where $k$ is the largest
 value such that both ${W_k}\geq{4}$ and
 ${H_k}\geq{4}.$  At each stage
-$i\in\{1,\ldots,k\}$ of binning, pay attention
-to the mask-images $M_i,$ and store the location
-of each superpixel $p,$ which is the center of a
-${3}\times{3}$ block of superpixels, every one
-of which has value $2^{2i}$ in the binned
-mask-image $M_i.$
+$i\in\left\{1,\ldots,k\right\}$ of binning, pay
+attention to the mask-images $M_i,$ and store
+the location of each superpixel $p,$ which is
+the center of a ${3}\times{3}$ block of
+superpixels, every one of which has value
+$2^{2i}$ in the binned mask-image $M_i.$
 
 After construction of the binned images, next
 consider them, beginning with $k,$ in reverse
