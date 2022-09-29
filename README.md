@@ -137,14 +137,14 @@ Construct every successive, binned image of
 $I_0$ and $M_0.$  First,
 
 - $I_1$ and $M_1$, each of which has
-  $W_1=W_0/2$, has $H_1=H_0/2$, and is binned
-  into superpixels, each of ${2}\times{2}$
-  unbinned pixels; then
+  $W_1=\frac{W_0}{2},$ has $H_1=\frac{H_0}{2},$
+  and is binned into superpixels, each of
+  ${2}\times{2}$ unbinned pixels; then
 
-- $I_2$ and $M_2$, each with superpixels of
+- $I_2$ and $M_2,$ each with superpixels of
   ${4}\times{4}$ unbinned pixels;
 
-- $I_3$ and $M_3$, each with ${8}\times{8}$
+- $I_3$ and $M_3,$ each with ${8}\times{8}$
   superpixels; etc.
 
 In the case of $M_i,$ for any $i,$ each
