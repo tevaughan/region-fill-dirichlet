@@ -144,8 +144,8 @@ $I_0$ and $M_0.$  First,
 - $I_2$ and $M_2,$ each with superpixels of
   ${4}\times{4}$ unbinned pixels;
 
-- $I_3$ and $M_3,$ each with ${8}\times{8}$
-  superpixels; etc.
+- $I_3$ and $M_3,$ each with superpixels of
+  ${8}\times{8}$ unbinned pixels; etc.
 
 In the case of $M_i,$ for any $i,$ each
 superpixel contains the *sum* of the four
