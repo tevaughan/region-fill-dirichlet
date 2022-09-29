@@ -99,22 +99,27 @@ finite-element solution to Laplace's equation.
 ### Prepare Image and Mask
 
 Consider an image $I$ and a mask $M$, each of
-size ${W}\times{H}.$  Let the mask have value of
-1 at each pixel to be filled and 0 at each pixel
+size ${W}\times{H},$ where $W$ is the width, and
+$H,$ the height.  Let the mask have value of 1
+at each pixel to be filled and 0 at each pixel
 not to be filled.
 
-Extend $I$ to a larger image $I_0$ by
-replicating border-values from $I$ until, for
-the smallest integer $w,$ the width of $I_0$ is
+Extend $I,$ if necessary, to a larger image
+$I_0,$ each of whose width $W_0$ and height
+$H_0$ is a power of two.  Place $I$ at center of
+$I_0$ (or so close as practical).  Replicate
+edge-values from $I$ to fill border around $I$
+in $I_0.$  For the smallest integer $w,$ the
+width of $I_0$ is
 
-$$ W_0 = 2^w \geq W + 2^{b + 2} $$
+$$ W_0 = 2^w \geq W $$
 
 and, for the smallest integer $h,$ the height is
 
-$$ H_0 = 2^h \geq H + 2^{b + 2}, $$
+$$ H_0 = 2^h \geq H. $$
 
-where $b$ is an integer parameter indicating the
-greatest level of binning to be considered.
+Similarly, extend $M$ to a larger mask $M_0$,
+but replicate zeros outside of $M$ in $M_0$.
 
 For each $i\in(1,2,\dots,b),$ an image $I_i$ and
 a mask $M_i,$ each consisting of superpixels, is
@@ -123,15 +128,7 @@ binned image that will be considered consists of
 superpixels, each of which corresponds to
 ${2^b}\times{2^b}$ original pixels.
 
-After $I$ has been extended, $I$ should be
-roughly centered within $I_0,$ whose border has
-been replicated from the outer-most pixels of
-$I$ to equal thickness along every side.
-
-Similarly, extend $M$ to a larger mask $M_0$ but
-by replicating zeros outside $M$.
-
-### Find Squares Over Which To Interpolate
+### Do Binning
 
 Construct every successive, binned image of
 $I_0$ and $M_0.$  First,
@@ -153,7 +150,7 @@ corresponding pixel-values at the next higher
 stage of resolution.  In the case of $I_i,$ each
 superpixel contains the *mean* of a subset of
 the unbinned pixels lying within the superpixel.
-The mean is calculated from those unbinned
+The mean is calculated from only those unbinned
 pixels, each of which has value 0 in the
 corresponding mask-pixel.
 
@@ -169,6 +166,8 @@ has value $2^{2i}$.
 After construction of the binned images, next
 consider them, beginning with $b,$ in reverse
 order, for each $i\in(b,b-1,\dots,1).$
+
+### Process Binned Images
 
 For each $M_i$ in $M_b,M_{b-1},\ldots,M_1,$ find
 each ${2}\times{2}$ contained, as described
@@ -187,11 +186,8 @@ that what is solved for in the linear problem is
 only that portion of its value weighted by the
 fraction $f$ of mask-pixels with value 1.  The
 remaining fraction $1-f$ is used to weight the
-mean value of the boundary-pixels within it, as
-if $p$ were a boundary to its neighbors.  Use a
-superpixel in $I_i$ as pure boundary-value
-whenever the corresponding superpixel in $M_i$
-has zero value.
+mean value of the not-to-be-filled pixels within
+it, as if $p$ were a boundary to its neighbors.
 
 After the solution has been found at the current
 level of binning, suppose that a superpixel's
