@@ -176,20 +176,22 @@ above, completely within the region of pixels to
 be filled.  When at least one such block exists,
 solve the Dirichlet-problem at this binning
 level for the value of every pixel that, in the
-mask-image, has non-zero value.  The weights are
-generalized from those used in the standard
-solution.  A superpixel that contains both
-unbinned pixels in the region to be filled and
-pixels on the boundary will be weighted relative
-to its neighbors so that what is solved for in
-the linear problem is only that portion of its
-value weighted by the fraction $f$ of
-mask-pixels with value 1. The remaining fraction
-$1-f$ is used to weight the mean value of the
-boundary-pixels within it, as if they were
-another neighbor.  Use a superpixel in $I_i$ as
-pure boundary-value whenever the corresponding
-superpixel in $M_i$ has zero value.
+mask-image, has non-zero value.
+
+The weights are generalized from those used in
+the standard solution.  A superpixel $p$ that
+contains both unbinned pixels in the region to
+be filled and unbinned pixels on the boundary
+will be weighted relative to its neighbors so
+that what is solved for in the linear problem is
+only that portion of its value weighted by the
+fraction $f$ of mask-pixels with value 1.  The
+remaining fraction $1-f$ is used to weight the
+mean value of the boundary-pixels within it, as
+if $p$ were a boundary to its neighbors.  Use a
+superpixel in $I_i$ as pure boundary-value
+whenever the corresponding superpixel in $M_i$
+has zero value.
 
 After the solution has been found at the current
 level of binning, suppose that a superpixel's
