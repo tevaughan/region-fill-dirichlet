@@ -117,7 +117,7 @@ where $b$ is an integer parameter indicating the
 greatest level of binning to be considered.
 
 For each $i\in(1,2,\dots,b),$ an image $I_i$ and
-a mask $M_i$, each consisting of superpixels, is
+a mask $M_i,$ each consisting of superpixels, is
 constructed as described below.  The coarsest,
 binned image that will be considered consists of
 superpixels, each of which corresponds to
