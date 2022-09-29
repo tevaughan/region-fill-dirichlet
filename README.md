@@ -106,12 +106,27 @@ not to be filled.
 Extend $I$ to a larger image $I_0$ by
 replicating its border-values until, for the
 smallest integer $w,$ the width of $I_0$ is
-$W_0={2^w}\geq{2W}$ and, for the smallest
-integer $h,$ the height is $H_0={2^h}\geq{2H}.$
-After this extension, the original image should
-be roughly centered within a larger image whose
-border has been replicated to equal thickness
-along every side.
+
+$$ W_0 = 2^w \geq W + 2^{b + 2} $$
+
+and, for the smallest integer $h,$ the height is
+
+$$ H_0 = 2^h \geq H + 2^{b + 2}, $$
+
+where $b$ is an integer parameter indicating the
+greatest level of binning to be considered.
+
+For each $i\in(1,2,\dots,b),$ an image $I_i$ and
+a mask $M_i$, each consisting of superpixels, is
+constructed as described below.  The coarsest,
+binned image that will be considered consists of
+superpixels, each of which corresponds to
+${2^b}\times{2^b}$ original pixels.
+
+After $I$ has been extended, $I$ should be
+roughly centered within $I_0,$ whose border has
+been replicated from the outer-most pixels of
+$I$ to equal thickness along every side.
 
 Similarly, extend $M$ to a larger mask $M_0$ but
 by replicating zeros outside $M$.
@@ -123,8 +138,8 @@ $I_0$ and $M_0.$  First,
 
 - $I_1$ and $M_1$, each of which has
   $W_1=W_0/2$, has $H_1=H_0/2$, and is binned
-  into superpixels of ${2}\times{2}$ unbinned
-  pixels each; then
+  into superpixels, each of ${2}\times{2}$
+  unbinned pixels; then
 
 - $I_2$ and $M_2$, each with superpixels of
   ${4}\times{4}$ unbinned pixels;
@@ -132,46 +147,69 @@ $I_0$ and $M_0.$  First,
 - $I_3$ and $M_3$, each with ${8}\times{8}$
   superpixels; etc.
 
-In each case, a superpixel contains the sum of
-the four corresponding pixel-values at the next
-higher stage of resolution.
+In the case of $M_i,$ for any $i,$ each
+superpixel contains the *sum* of the four
+corresponding pixel-values at the next higher
+stage of resolution.  In the case of $I_i,$ each
+superpixel contains the *mean* of a subset of
+the unbinned pixels lying within the superpixel.
+The mean is calculated from those unbinned
+pixels, each of which has value 0 in the
+corresponding mask-pixel.
 
-Construct $I_1,I_2,\ldots,I_k,$ and
-$M_1,M_2,\ldots,M_k,$ where $k$ is the largest
-value such that both ${W_k}\geq{4}$ and
-${H_k}\geq{4}.$  At each stage
-$i\in(1,\ldots,k)$ of binning, pay attention to
-the mask-images $M_i,$ and store the location of
-each superpixel $p,$ which is the center of a
-${3}\times{3}$ block of superpixels, every one
-of which has value $2^{2i}$ in the binned
-mask-image $M_i.$
+Construct $I_1,I_2,\ldots,I_b,$ and
+$M_1,M_2,\ldots,M_b,$ where $b$ is the largest
+value of the binning parameter as described
+above.  At each stage $i\in(1,\ldots,b)$ of
+binning, for the mask-image $M_i,$ store the
+location of each ${2}\times{2}$ block of
+superpixels, every one of whose four superpixels
+has value $2^{2i}$.
 
 After construction of the binned images, next
-consider them, beginning with $k,$ in reverse
-order, for each $i\in(k,k-1,\dots,1).$
+consider them, beginning with $b,$ in reverse
+order, for each $i\in(b,b-1,\dots,1).$
 
-For each $M_i$ in $M_k,M_{k-1},\ldots,M_1,$ find
-each superpixel $p$ that is the center of a
-${3}\times{3}$ block of full-valued pixels.
-When at least one such block exists, solve the
-Dirichlet-problem at this binning level for the
-value of every pixel that, in the mask-image,
-has non-zero value.  Use a superpixel in $I_i$
-as boundary-value whenever the corresponding
-superpixel in $M_i$ has zero value. Suppose that
-the solved-for value applies at the center of
-each solved-for superpixel, and linearly
-interpolate values across each central $p$ to
-fill in every unbinned pixel that corresponds to
-$p$.  Redo the binning for $p$ from the bottom
-up in $I_1,\ldots,I_{i-1},$ and reset to zero
-every pixel corresponding to $p$ in every
-higher-resolution masks $M_{i-1},\ldots,M_1.$
-Then proceed to $i-1$ and repeat.
+For each $M_i$ in $M_b,M_{b-1},\ldots,M_1,$ find
+each ${2}\times{2}$ constained, as described
+above, completely within the region of pixels to
+be filled.  When at least one such block exists,
+solve the Dirichlet-problem at this binning
+level for the value of every pixel that, in the
+mask-image, has non-zero value.  The weights are
+generalized from those used in the standard
+solution.  A superpixel that contains both
+unbinned pixels in the region to be filled and
+pixels on the boundary will be weighted relative
+to its neighbors so that what is solved for in
+the linear problem is only that portion of its
+value weighted by the fraction $f$ of
+mask-pixels with value 1. The remaining fraction
+$1-f$ is used to weight the mean value of the
+boundary-pixels within it, as if they were
+another neighbor.  Use a superpixel in $I_i$ as
+pure boundary-value whenever the corresponding
+superpixel in $M_i$ has zero value.
 
-As a last step, solve the Dirichlet problem for
-the remaining unbinned pixels.
+After the solution has been found at the current
+level of binning, suppose that a superpixel's
+value applies at the center of the superpixel,
+and, for each ${2}\times{2}$ block described
+above, linearly interpolate values across the
+unbinned pixels in the square region, each of
+whose corners is the center of one of the
+superpixels in the ${2}\times{2}.$
+
+Redo the binning for those interpolated pixels
+from the bottom up in $I_1,\ldots,I_{i-1},$ and
+reset to zero every pixel corresponding to an
+interpolated pixel in every higher-resolution
+mask $M_{i-1},\ldots,M_1.$
+
+Then proceed to $i-1$ and repeat until $i=1.$
+
+Finally, solve the Dirichlet problem for the
+remaining unbinned pixels.
 
 ### Prepare Linear Model
 
