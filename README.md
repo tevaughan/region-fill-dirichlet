@@ -104,8 +104,8 @@ size ${W}\times{H}.$  Let the mask have value of
 not to be filled.
 
 Extend $I$ to a larger image $I_0$ by
-replicating its border-values until, for the
-smallest integer $w,$ the width of $I_0$ is
+replicating border-values from $I$ until, for
+the smallest integer $w,$ the width of $I_0$ is
 
 $$ W_0 = 2^w \geq W + 2^{b + 2} $$
 
