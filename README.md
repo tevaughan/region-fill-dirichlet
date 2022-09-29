@@ -171,7 +171,7 @@ consider them, beginning with $b,$ in reverse
 order, for each $i\in(b,b-1,\dots,1).$
 
 For each $M_i$ in $M_b,M_{b-1},\ldots,M_1,$ find
-each ${2}\times{2}$ constained, as described
+each ${2}\times{2}$ contained, as described
 above, completely within the region of pixels to
 be filled.  When at least one such block exists,
 solve the Dirichlet-problem at this binning
