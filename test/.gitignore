@@ -1,4 +1,5 @@
 .d
 FillBiLinTest
 FillTest
+interpolateTest
 *.o
