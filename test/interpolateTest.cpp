@@ -13,12 +13,25 @@ using std::cout;
 using std::endl;
 
 
-TEST_CASE("interpolate() works.", "[interpolate]") {
-  Array22<int> crn;
-  crn << 1, 2, 4, 8;
+TEST_CASE("interpolate() basically works.", "[interpolate]") {
+  Array22<float> crn;
+  crn << -0.5f, +1.5f, +3.5f, +5.5f;
   ArrayXX<float> cen(2, 2);
   interpolate(crn, cen);
-  cout << "cen=\n" << cen << endl;
+  ArrayXX<float> truth(2, 2);
+  truth << 1.0f, 2.0f, 3.0f, 4.0f;
+  REQUIRE((cen == truth).cast<int>().sum() == 4);
+}
+
+
+TEST_CASE("interpolate() rounds properly.", "[interpolate]") {
+  Array22<float> crn;
+  crn << -4.5f, -2.5f, +1.5f, +3.5f;
+  ArrayXX<int> cen(2, 2);
+  interpolate(crn, cen);
+  ArrayXX<int> truth(2, 2);
+  truth << -3, -2, 1, 2;
+  REQUIRE((cen == truth).cast<int>().sum() == 4);
 }
 
 
