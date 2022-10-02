@@ -3,10 +3,13 @@
 /// \brief      Tests for df::bin2x2().
 
 #include "df/bin2x2.hpp"                // bin2x2()
+#include "df/BinPrep.hpp"               // BinPrep
 #include <catch2/catch_test_macros.hpp> // TEST_CASE
 #include <iostream>
 
 using df::bin2x2;
+using df::BinPrep;
+using df::Extension;
 using Eigen::ArrayXX;
 using std::cout;
 using std::endl;
@@ -27,7 +30,8 @@ TEST_CASE("bin2x2() extends with zero.", "[bin2x2]") {
   a.row(0) << 1, 2, 3;
   a.row(1) << 4, 5, 6;
   a.row(2) << 7, 8, 9;
-  auto const b= bin2x2(a);
+  auto const bp= BinPrep(a, 1);
+  auto const b = bin2x2(bp.extArray);
   REQUIRE(b.rows() == 2);
   REQUIRE(b.cols() == 2);
   REQUIRE(b(0, 0) == 12);
@@ -42,7 +46,8 @@ TEST_CASE("bin2x2() extends by duplication.", "[bin2x2]") {
   a.row(0) << 1, 2, 3;
   a.row(1) << 4, 5, 6;
   a.row(2) << 7, 8, 9;
-  auto const b= bin2x2(a, true);
+  auto const bp= BinPrep(a, 1, Extension::COPIES);
+  auto const b = bin2x2(bp.extArray);
   REQUIRE(b.rows() == 2);
   REQUIRE(b.cols() == 2);
   REQUIRE(b(0, 0) == 12);
