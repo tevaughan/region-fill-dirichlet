@@ -1,6 +1,11 @@
 /// \file       BinPrep.hpp
 /// \copyright  2022 Thomas E. Vaughan.  See terms in LICENSE.
-/// \brief      Definition of df::minMult(), df::BinPrep.
+///
+/// \brief      Definition of
+///               df::minMult(),
+///               df::maxBinFactor(),
+///               df::Extension,
+///               df::BinPrep.
 
 #pragma once
 #include <eigen3/Eigen/Dense> // ArrayXX, seq
@@ -23,29 +28,36 @@ int minMult(int n, int f) {
 }
 
 
-/// Code identifying how prepBinning() should fill new cells in extension of
-/// original array.
+/// Maximum binning factor for extension of array `a`.
+///
+/// Maximum factor is largest power of two that is
+/// - less than or equal to 1/4 of number of rows    in `a`, and
+/// - less than or equal to 1/4 of number of columns in `a`.
+///
+/// By limiting the maximum binning factor in this way, one ensures that most
+/// binned image has at least 4x4 pixels.
+///
+/// \param a  Original array that might be extended in rows and columns.
+/// \return   Maximum binning factor.
+template<typename A> int maxBinFactor(A const &a) {
+  int           bf= 1;
+  constexpr int D = 8;
+  while(bf <= a.rows() / D && bf <= a.cols() / D) bf*= 2;
+  return bf;
+}
+
+
+/// Code identifying how to fill new cells in extension of original array.
 enum Extension {
   ZEROS, ///< Fill new cells with zeros.
   COPIES ///< Fill new cels with copy of edge of original array.
 };
 
 
-/// Type of array returned by prepBinning().
-/// \tparam A  Type of array passed to prepBinning().
-template<typename A> using BinArray= ArrayXX<typename A::Scalar>;
-
-
-/// Calculate BinPrep::extArray, which is guaranteed to be binnable to level
-/// specified in constructor.
-///
+/// Calculate array that is guaranteed to be binnable.
 /// \tparam A  Type of original array passed to constructor.
-///
 template<typename A> class BinPrep {
   using S= typename A::Scalar; ///< Type of scalar in original array.
-  int const maxBin_;           ///< Maximum binning factor in each direction.
-  int const bRows_;            ///< Number of rows in extArray.
-  int const bCols_;            ///< Number of cols in extArray.
 
   /// Maximum row-offset for array.
   /// \tparam T  Type of array.
@@ -81,32 +93,31 @@ template<typename A> class BinPrep {
   }
 
 public:
+  int const maxBinFactor; ///< Maximum binning factor in each direction.
+  int const bRows;        ///< Number of rows in extArray.
+  int const bCols;        ///< Number of cols in extArray.
+
   /// Array that, in comparison with original array passed to constructor, is
-  /// (possibly) extended in number of rows and/or columns so that extArray is
-  /// guaranteed to be binnable to level specified in constructor, initialized
-  /// in upper left with copy of original array, and padded on right and bottom
-  /// as specified in constructor.
+  /// (possibly) extended in number of rows and/or columns so that extended
+  /// array is guaranteed to be binnable, initialized in upper left with copy
+  /// of original array, and padded on right and bottom as specified in
+  /// constructor.
   ArrayXX<S> extArray;
 
-  /// Initialize extArray.
+  /// Initialize (possibly) extended array.
   ///
-  /// \param a      Original array from which extArray is built.
+  /// \param a  Original array from which extended array is built.
   ///
-  /// \param level  Number of 2x2-binnings that extArray is guaranteed to be
-  ///               binnable to.  Each binning reduces each of number of rows
-  ///               and number of columns by factor of two.
+  /// \param e  If ZEROS, fill with zeros all new cells in portion of exteded
+  ///           array not covered by `a`, which is copied into top left of
+  ///           extended array; otherwise, replicate bottom-right edges of `a`
+  ///           as necessary to fill extended array.
   ///
-  /// \param e      If ZEROS, fill with zeros all new cells in portion of
-  ///               extArray not covered by `a`, which is copied into top left
-  ///               of extArray; otherwise, replicate bottom-right edges of `a`
-  ///               as necessary to fill extArray.
-  ///
-  BinPrep(A const &a, int level, Extension e= ZEROS):
-      maxBin_(1 << level),
-      bRows_(minMult(a.rows(), maxBin_)),
-      bCols_(minMult(a.cols(), maxBin_)),
-      extArray(bRows_, bCols_) {
-    if(level < 0) throw "negative level of binning";
+  BinPrep(A const &a, Extension e= ZEROS):
+      maxBinFactor(df::maxBinFactor(a)),
+      bRows(minMult(a.rows(), maxBinFactor)),
+      bCols(minMult(a.cols(), maxBinFactor)),
+      extArray(bRows, bCols) {
     extArray(seq(0, a.rows() - 1), seq(0, a.cols() - 1))= a;
     if(extArray.rows() == a.rows() && extArray.cols() == a.cols()) return;
     if(e == ZEROS) {
@@ -114,11 +125,13 @@ public:
       topRgt(a)= ArrayXX<S>::Zero(topRgt(a).rows(), topRgt(a).cols());
       botRgt(a)= ArrayXX<S>::Zero(botRgt(a).rows(), botRgt(a).cols());
     } else {
+      // Compute amount of extension in each of row- and column-directions.
       auto const dr= extArray.rows() - a.rows();
       auto const dc= extArray.cols() - a.cols();
-      botLft(a)    = a(mr(a), seq(0, mc(a))).replicate(dr, 1);
-      topRgt(a)    = a(seq(0, mr(a)), mc(a)).replicate(1, dc);
-      botRgt(a)    = a(seq(mr(a), mr(a)), seq(mc(a), mc(a))).replicate(dr, dc);
+      // Replicate things on lower right of original array, and fill extArray.
+      botLft(a)= a(mr(a), seq(0, mc(a))).replicate(dr, 1);
+      topRgt(a)= a(seq(0, mr(a)), mc(a)).replicate(1, dc);
+      botRgt(a)= a(seq(mr(a), mr(a)), seq(mc(a), mc(a))).replicate(dr, dc);
     }
   }
 };
